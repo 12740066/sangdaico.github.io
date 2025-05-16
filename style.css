@@ -1,0 +1,18 @@
+body {
+  font-family: Arial, sans-serif;
+  margin: 20px;
+  max-width: 1000px;
+}
+input[type="number"] {
+  width: 60px;
+}
+.player-section {
+  margin-top: 20px;
+}
+.hole-label {
+  font-weight: bold;
+}
+.total-row {
+  font-weight: bold;
+  margin-top: 10px;
+}

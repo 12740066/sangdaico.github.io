@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Golf Bet Calculator</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <h1>Golf Bet Calculator</h1>
+  <div>
+    <label>Players (comma separated):</label>
+    <input type="text" id="playersInput" value="Alice,Bob,Charlie" />
+    <button onclick="startGame()">Start Game</button>
+  </div>
+
+  <div id="gameContainer"></div>
+
+  <button onclick="calculateTotal()">Calculate Total</button>
+  <div id="results"></div>
+
+  <script src="script.js"></script>
+</body>
+</html>
