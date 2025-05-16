@@ -1,3 +1,4 @@
+<!-- index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -9,9 +10,13 @@
 <body>
   <h1>Golf Bet Calculator</h1>
   <div id="setup">
-    <label>Players (comma separated):</label>
-    <input type="text" id="playersInput" value="Alice,Bob,Charlie"/>
-    <button onclick="startGame()">Start Game</button>
+    <label>Number of Players:</label>
+    <input type="number" id="numPlayers" min="1" max="8" value="4"/>
+    <button onclick="generatePlayerInputs()">Next</button>
+    <div id="playerDetails"></div>
+    <div id="startButton" style="display:none;">
+      <button onclick="startGame()">Start Game</button>
+    </div>
   </div>
 
   <div id="scorecard" style="display:none;">
