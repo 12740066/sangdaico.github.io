@@ -1,231 +1,247 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Golf Bet Calculator</title>
-  <style>
-    body { font-family: sans-serif; padding: 20px; max-width: 800px; margin: auto; }
-    .player { margin-bottom: 10px; }
-    .player input { width: 50px; }
-    .score-inputs button { margin: 0 3px; }
-    table, th, td { border: 1px solid #ccc; border-collapse: collapse; padding: 5px; text-align: center; }
-    table { margin-top: 20px; width: 100%; }
-    .money { font-weight: bold; }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Golf Bet Calculator</title>
+<style>
+  body { font-family: Arial, sans-serif; max-width: 900px; margin: 1rem auto; padding: 0 1rem; }
+  h1 { text-align: center; }
+  label { display: inline-block; width: 150px; }
+  input[type=number] { width: 60px; text-align: center; }
+  button { margin: 0 4px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+  th, td { border: 1px solid #ccc; padding: 0.5rem; text-align: center; }
+  th { background: #eee; }
+  .money-positive { color: green; font-weight: bold; }
+  .money-negative { color: red; font-weight: bold; }
+  .control-row { margin-bottom: 1rem; }
+  .player-inputs > div { margin-bottom: 1rem; }
+</style>
 </head>
 <body>
 
-  <h1>Golf Bet Calculator</h1>
+<h1>Golf Bet Calculator</h1>
 
-  <div id="setup">
-    <div>
-      <label>Number of players:</label>
-      <button onclick="changePlayers(-1)">-</button>
-      <span id="numPlayers">2</span>
-      <button onclick="changePlayers(1)">+</button>
-    </div>
-    <div>
-      <label>Skin Value ($):</label>
-      <button onclick="changeSkin(-1)">-</button>
-      <span id="skinValue">5</span>
-      <button onclick="changeSkin(1)">+</button>
-    </div>
-    <div id="playerInputs"></div>
-    <button onclick="startGame()">Start Game</button>
-  </div>
+<div class="control-row">
+  <label>Number of Players:</label>
+  <button id="players-decrease">-</button>
+  <input type="number" id="numPlayers" value="4" min="2" max="10" readonly />
+  <button id="players-increase">+</button>
+</div>
 
-  <div id="game" style="display:none;">
-    <h2>Hole <span id="holeNum">1</span></h2>
-    <table id="scoreTable"></table>
-    <button onclick="prevHole()">Previous Hole</button>
-    <button onclick="nextHole()">Next Hole</button>
+<div class="control-row">
+  <label>Skin Value ($):</label>
+  <button id="skin-decrease">-</button>
+  <input type="number" id="skinValue" value="5" min="1" max="100" readonly />
+  <button id="skin-increase">+</button>
+</div>
 
-    <h3>Total Money</h3>
-    <ul id="totals"></ul>
-  </div>
+<button id="startGame">Start / Next Hole</button>
+<span style="margin-left: 1rem;">Current Hole: <span id="holeNumber">1</span></span>
 
-  <script>
-    let numPlayers = 2;
-    let skinValue = 5;
-    let currentHole = 1;
-    let players = [];
-    let scores = {};
-    let handicaps = {};
+<div class="player-inputs"></div>
 
-    function changePlayers(delta) {
-      numPlayers = Math.max(2, numPlayers + delta);
-      document.getElementById('numPlayers').innerText = numPlayers;
-      renderPlayerInputs();
-    }
+<table id="resultsTable" style="display:none;">
+  <thead>
+    <tr>
+      <th>Player</th>
+      <th>Strokes</th>
+      <th>Bonus</th>
+      <th>Penalty</th>
+      <th>Money this hole</th>
+      <th>Total Money</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
 
-    function changeSkin(delta) {
-      skinValue = Math.max(1, skinValue + delta);
-      document.getElementById('skinValue').innerText = skinValue;
-    }
+<script>
+(() => {
+  const maxPlayers = 10;
+  let numPlayers = 4;
+  let skinValue = 5;
+  let holeNumber = 1;
+  let players = [];
+  let totalMoney = []; // accumulated total money per player
 
-    function renderPlayerInputs() {
-      const container = document.getElementById('playerInputs');
-      container.innerHTML = '';
-      for (let i = 0; i < numPlayers; i++) {
-        container.innerHTML += `
-          <div class="player">
-            Player ${i + 1} Name: <input id="name${i}" placeholder="Name" />
-            Handicap: <input id="hcp${i}" type="number" value="0" />
-          </div>
-        `;
+  const numPlayersInput = document.getElementById('numPlayers');
+  const skinValueInput = document.getElementById('skinValue');
+  const playersDecreaseBtn = document.getElementById('players-decrease');
+  const playersIncreaseBtn = document.getElementById('players-increase');
+  const skinDecreaseBtn = document.getElementById('skin-decrease');
+  const skinIncreaseBtn = document.getElementById('skin-increase');
+  const startGameBtn = document.getElementById('startGame');
+  const playerInputsDiv = document.querySelector('.player-inputs');
+  const resultsTable = document.getElementById('resultsTable');
+  const resultsTbody = resultsTable.querySelector('tbody');
+  const holeNumberSpan = document.getElementById('holeNumber');
+
+  // Initialize or load from localStorage
+  function loadState() {
+    const saved = localStorage.getItem('golfBetState');
+    if (saved) {
+      try {
+        const data = JSON.parse(saved);
+        numPlayers = data.numPlayers || 4;
+        skinValue = data.skinValue || 5;
+        holeNumber = data.holeNumber || 1;
+        players = data.players || [];
+        totalMoney = data.totalMoney || Array(numPlayers).fill(0);
+      } catch {
+        resetState();
       }
+    } else {
+      resetState();
     }
+  }
 
-    function startGame() {
-      players = [];
-      handicaps = {};
-      scores = {};
-      currentHole = 1;
-      for (let i = 0; i < numPlayers; i++) {
-        const name = document.getElementById(`name${i}`).value || `Player ${i + 1}`;
-        const hcp = parseInt(document.getElementById(`hcp${i}`).value) || 0;
-        players.push(name);
-        handicaps[name] = hcp;
-        scores[name] = {};
-      }
-      document.getElementById('setup').style.display = 'none';
-      document.getElementById('game').style.display = 'block';
-      saveData();
-      renderHole();
+  function resetState() {
+    players = [];
+    totalMoney = [];
+    for(let i=0; i<numPlayers; i++) {
+      players.push({ name: `Player ${i+1}`, strokes: 0, bonus: 0, penalty: 0 });
+      totalMoney.push(0);
     }
+  }
 
-    function renderHole() {
-      document.getElementById('holeNum').innerText = currentHole;
-      const table = document.getElementById('scoreTable');
-      table.innerHTML = `
-        <tr>
-          <th>Player</th>
-          <th>Strokes</th>
-          <th>Bonus</th>
-          <th>Penalty</th>
-          <th>Money</th>
-        </tr>
+  function saveState() {
+    localStorage.setItem('golfBetState', JSON.stringify({
+      numPlayers,
+      skinValue,
+      holeNumber,
+      players,
+      totalMoney
+    }));
+  }
+
+  // Create player inputs UI
+  function renderPlayerInputs() {
+    playerInputsDiv.innerHTML = '';
+    for(let i=0; i<numPlayers; i++) {
+      if (!players[i]) players[i] = { name: `Player ${i+1}`, strokes: 0, bonus: 0, penalty: 0 };
+      const p = players[i];
+      const container = document.createElement('div');
+      container.style.marginBottom = '10px';
+
+      container.innerHTML = `
+        <strong>${p.name}</strong>
+        &nbsp;&nbsp; Strokes: 
+          <button class="dec" data-type="strokes" data-index="${i}">-</button> 
+          <span id="strokes-${i}">${p.strokes}</span> 
+          <button class="inc" data-type="strokes" data-index="${i}">+</button> 
+
+        &nbsp;&nbsp; Bonus: 
+          <button class="dec" data-type="bonus" data-index="${i}">-</button> 
+          <span id="bonus-${i}">${p.bonus}</span> 
+          <button class="inc" data-type="bonus" data-index="${i}">+</button> 
+
+        &nbsp;&nbsp; Penalty: 
+          <button class="dec" data-type="penalty" data-index="${i}">-</button> 
+          <span id="penalty-${i}">${p.penalty}</span> 
+          <button class="inc" data-type="penalty" data-index="${i}">+</button> 
       `;
-      players.forEach(name => {
-        if (!scores[name][currentHole]) {
-          scores[name][currentHole] = { strokes: 0, bonus: 0, penalty: 0 };
+
+      playerInputsDiv.appendChild(container);
+    }
+
+    // Add event listeners for increment/decrement
+    playerInputsDiv.querySelectorAll('button').forEach(btn => {
+      btn.onclick = () => {
+        const type = btn.dataset.type;
+        const idx = parseInt(btn.dataset.index);
+        if (btn.classList.contains('inc')) {
+          players[idx][type]++;
+        } else if (btn.classList.contains('dec')) {
+          if (players[idx][type] > 0) players[idx][type]--;
         }
-        const data = scores[name][currentHole];
-        table.innerHTML += `
-          <tr>
-            <td>${name}</td>
-            <td class="score-inputs">
-              <button onclick="changeValue('${name}', 'strokes', -1)">-</button>
-              ${data.strokes}
-              <button onclick="changeValue('${name}', 'strokes', 1)">+</button>
-            </td>
-            <td>
-              <button onclick="changeValue('${name}', 'bonus', -1)">-</button>
-              ${data.bonus}
-              <button onclick="changeValue('${name}', 'bonus', 1)">+</button>
-            </td>
-            <td>
-              <button onclick="changeValue('${name}', 'penalty', -1)">-</button>
-              ${data.penalty}
-              <button onclick="changeValue('${name}', 'penalty', 1)">+</button>
-            </td>
-            <td class="money" id="money-${name}">$0</td>
-          </tr>
-        `;
-      });
-      calculateMoney();
-    }
-
-    function changeValue(player, type, delta) {
-      const data = scores[player][currentHole];
-      data[type] = Math.max(0, data[type] + delta);
-      renderHole();
-      saveData();
-    }
-
-    function prevHole() {
-      if (currentHole > 1) {
-        currentHole--;
-        renderHole();
-      }
-    }
-
-    function nextHole() {
-      currentHole++;
-      renderHole();
-    }
-
-    function calculateMoney() {
-      const earnings = {};
-      players.forEach(name => earnings[name] = 0);
-
-      players.forEach(p1 => {
-        const s1 = scores[p1][currentHole];
-        if (!s1) return;
-        let total = 0;
-        players.forEach(p2 => {
-          if (p1 === p2) return;
-          const s2 = scores[p2][currentHole];
-          if (!s2) return;
-          const diff = s2.strokes - s1.strokes;
-          if (diff < 0) total += -1;
-          else if (diff > 0) total += 1;
-        });
-        const money = (total * skinValue) + (s1.bonus * skinValue * (players.length - 1)) - (s1.penalty * skinValue * (players.length - 1));
-        earnings[p1] += money;
-        document.getElementById(`money-${p1}`).innerText = `$${money}`;
-      });
-
-      // total across all holes
-      const totals = {};
-      players.forEach(name => totals[name] = 0);
-      players.forEach(name => {
-        for (let h in scores[name]) {
-          const s = scores[name][h];
-          let t = 0;
-          players.forEach(other => {
-            if (name === other || !scores[other][h]) return;
-            const diff = scores[other][h].strokes - s.strokes;
-            if (diff < 0) t += -1;
-            else if (diff > 0) t += 1;
-          });
-          totals[name] += (t * skinValue) + (s.bonus * skinValue * (players.length - 1)) - (s.penalty * skinValue * (players.length - 1));
-        }
-      });
-
-      const totalDiv = document.getElementById('totals');
-      totalDiv.innerHTML = '';
-      players.forEach(name => {
-        totalDiv.innerHTML += `<li>${name}: $${totals[name]}</li>`;
-      });
-    }
-
-    function saveData() {
-      const data = {
-        numPlayers, skinValue, players, scores, handicaps, currentHole
+        updatePlayerDisplay(idx);
+        calculateAndRenderResults();
+        saveState();
       };
-      localStorage.setItem('golfBetData', JSON.stringify(data));
-    }
+    });
+  }
 
-    function loadData() {
-      const data = JSON.parse(localStorage.getItem('golfBetData'));
-      if (data) {
-        numPlayers = data.numPlayers;
-        skinValue = data.skinValue;
-        players = data.players;
-        scores = data.scores;
-        handicaps = data.handicaps;
-        currentHole = data.currentHole || 1;
-        document.getElementById('setup').style.display = 'none';
-        document.getElementById('game').style.display = 'block';
-        renderHole();
-      } else {
-        renderPlayerInputs();
+  // Update displayed number for one player input row
+  function updatePlayerDisplay(idx) {
+    document.getElementById(`strokes-${idx}`).textContent = players[idx].strokes;
+    document.getElementById(`bonus-${idx}`).textContent = players[idx].bonus;
+    document.getElementById(`penalty-${idx}`).textContent = players[idx].penalty;
+  }
+
+  // Calculate money for current hole and update total
+  function calculateAndRenderResults() {
+    resultsTbody.innerHTML = '';
+    resultsTable.style.display = 'table';
+
+    // Current hole money per player (reset to 0 before calc)
+    const holeMoney = Array(numPlayers).fill(0);
+
+    // 1. Pairwise stroke comparisons
+    for (let i = 0; i < numPlayers; i++) {
+      for (let j = 0; j < numPlayers; j++) {
+        if (i === j) continue;
+        const diff = players[j].strokes - players[i].strokes;
+        if (diff > 0) {
+          holeMoney[i] += diff * skinValue;
+        } else if (diff < 0) {
+          holeMoney[i] += diff * skinValue; // diff is negative, so subtract money
+        }
+        // if diff == 0, no money exchanged
       }
     }
 
-    loadData();
-  </script>
+    // 2. Bonus & Penalty
+    for (let i = 0; i < numPlayers; i++) {
+      const bonusGain = players[i].bonus * skinValue * (numPlayers - 1);
+      holeMoney[i] += bonusGain;
+      for (let j = 0; j < numPlayers; j++) {
+        if (j === i) continue;
+        holeMoney[j] -= players[i].bonus * skinValue;
+      }
 
-</body>
-</html>
+      const penaltyLoss = players[i].penalty * skinValue * (numPlayers - 1);
+      holeMoney[i] -= penaltyLoss;
+      for (let j = 0; j < numPlayers; j++) {
+        if (j === i) continue;
+        holeMoney[j] += players[i].penalty * skinValue;
+      }
+    }
+
+    // Update total money and render
+    for(let i=0; i<numPlayers; i++) {
+      totalMoney[i] += holeMoney[i];
+    }
+
+    // Render table rows
+    for(let i=0; i<numPlayers; i++) {
+      const tr = document.createElement('tr');
+      const moneyThisHole = holeMoney[i];
+      const total = totalMoney[i];
+      tr.innerHTML = `
+        <td>${players[i].name}</td>
+        <td>${players[i].strokes}</td>
+        <td>${players[i].bonus}</td>
+        <td>${players[i].penalty}</td>
+        <td class="${moneyThisHole >=0 ? 'money-positive' : 'money-negative'}">$${moneyThisHole.toFixed(2)}</td>
+        <td class="${total >=0 ? 'money-positive' : 'money-negative'}">$${total.toFixed(2)}</td>
+      `;
+      resultsTbody.appendChild(tr);
+    }
+  }
+
+  // Reset inputs for next hole, keep total money and player names
+  function nextHole() {
+    holeNumber++;
+    holeNumberSpan.textContent = holeNumber;
+    players.forEach(p => {
+      p.strokes = 0;
+      p.bonus = 0;
+      p.penalty = 0;
+    });
+    renderPlayerInputs();
+    calculateAndRenderResults();
+    saveState();
+  }
+
+  //
