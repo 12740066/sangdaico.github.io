@@ -9,11 +9,26 @@
 <body>
   <div class="setup">
     <h2>Golf Bet Setup</h2>
-    <label>Number of Players: <input id="playerCount" type="number" min="2" max="6" /></label>
-    <label>Skin Value ($): <input id="skinValue" type="number" min="1" value="5" /></label>
-    <button onclick="generatePlayerInputs()">Next</button>
+
+    <div>
+      <label>Number of Players: 
+        <button onclick="adjustValue('playerCount', -1)">−</button>
+        <input id="playerCount" type="number" min="2" max="6" value="4" />
+        <button onclick="adjustValue('playerCount', 1)">+</button>
+      </label>
+    </div>
+
+    <div>
+      <label>Skin Value ($): 
+        <button onclick="adjustValue('skinValue', -1)">−</button>
+        <input id="skinValue" type="number" min="1" value="5" />
+        <button onclick="adjustValue('skinValue', 1)">+</button>
+      </label>
+    </div>
+
+    <button id="nextBtn">Next</button>
     <div id="playerInputs"></div>
-    <button onclick="startGame()">Start Game</button>
+    <button id="startBtn" style="display:none">Start Game</button>
   </div>
 
   <div id="game" style="display:none">
@@ -26,5 +41,37 @@
   </div>
 
   <script src="script.js"></script>
+  <script>
+    document.getElementById('nextBtn').addEventListener('click', () => {
+      const count = parseInt(document.getElementById('playerCount').value);
+      const container = document.getElementById('playerInputs');
+      container.innerHTML = '';
+      for (let i = 0; i < count; i++) {
+        container.innerHTML += `
+          <div>
+            <label>Player ${i+1} Name: <input id="pname${i}" /></label>
+            <label>Handicap: <input id="phcap${i}" type="number" /></label>
+          </div>
+        `;
+      }
+      document.getElementById('startBtn').style.display = 'inline-block';
+    });
+
+    document.getElementById('startBtn').addEventListener('click', () => {
+      startGame();
+    });
+
+    function adjustValue(id, delta) {
+      const input = document.getElementById(id);
+      let val = parseInt(input.value || '0');
+      val += delta;
+      if (id === 'playerCount') {
+        val = Math.max(2, Math.min(6, val));
+      } else if (id === 'skinValue') {
+        val = Math.max(1, val);
+      }
+      input.value = val;
+    }
+  </script>
 </body>
 </html>
