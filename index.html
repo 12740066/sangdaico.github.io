@@ -10,641 +10,494 @@
     max-width: 900px;
     margin: 1rem auto;
     padding: 1rem;
-    background: #f5f7fa;
+    background: #f9f9f9;
   }
-  h1, h2 {
+  h1 {
     text-align: center;
+  }
+  .input-group {
+    margin: 1rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
   }
   label {
-    margin-right: 0.5rem;
-  }
-  input[type="number"] {
-    width: 60px;
-    text-align: center;
-  }
-  button {
-    padding: 0.3rem 0.8rem;
-    margin: 0 0.3rem;
-    cursor: pointer;
-  }
-  .player-inputs {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    margin-bottom: 0.5rem;
-  }
-  .player-inputs > div {
-    display: flex;
-    align-items: center;
-    gap: 0.3rem;
-  }
-  .money {
-    width: 80px;
-    text-align: right;
+    min-width: 140px;
     font-weight: bold;
   }
-  #playerSetup, #gameScreen {
-    background: white;
-    padding: 1rem;
-    border-radius: 8px;
-    box-shadow: 0 0 10px #ccc;
+  button {
+    padding: 0.3rem 0.7rem;
+    cursor: pointer;
   }
-  #gameScreen {
-    display: none;
-  }
-  #holeControls {
-    margin: 1rem 0;
+  input[type="text"], input[type="number"] {
+    width: 50px;
     text-align: center;
   }
-  #historyList {
+  table {
+    width: 100%;
+    border-collapse: collapse;
     margin-top: 1rem;
-    max-height: 150px;
-    overflow-y: auto;
-    background: #eee;
-    padding: 0.5rem;
-    border-radius: 4px;
   }
-  #historyList div {
-    margin-bottom: 0.25rem;
+  th, td {
+    border: 1px solid #aaa;
+    padding: 0.4rem 0.7rem;
+    text-align: center;
+  }
+  th {
+    background: #ddd;
+  }
+  .money-positive {
+    color: green;
+    font-weight: bold;
+  }
+  .money-negative {
+    color: red;
+    font-weight: bold;
+  }
+  .controls {
+    text-align: center;
+    margin-top: 1rem;
+  }
+  .controls button {
+    margin: 0 0.3rem;
+    padding: 0.5rem 1rem;
   }
 </style>
 </head>
 <body>
-
 <h1>Golf Bet Calculator</h1>
 
-<div id="playerSetup">
-  <div>
+<div id="setup">
+  <div class="input-group">
     <label>Number of Players:</label>
-    <button type="button" id="playersMinus">−</button>
+    <button id="players-minus">-</button>
     <input type="number" id="numPlayers" value="4" min="2" max="8" readonly />
-    <button type="button" id="playersPlus">+</button>
+    <button id="players-plus">+</button>
   </div>
-  <div style="margin-top:0.5rem;">
+  <div class="input-group">
     <label>Skin Value ($):</label>
-    <button type="button" id="skinMinus">−</button>
+    <button id="skin-minus">-</button>
     <input type="number" id="skinValue" value="5" min="1" max="100" readonly />
-    <button type="button" id="skinPlus">+</button>
+    <button id="skin-plus">+</button>
   </div>
-  <div id="playersHandicapContainer" style="margin-top:1rem;">
-    <!-- Handicap inputs will be injected here -->
-  </div>
-  <div style="margin-top:1rem; text-align:center;">
-    <button id="startGameBtn">Start Game</button>
-  </div>
+  <button id="startGameBtn">Start Game</button>
 </div>
 
-<div id="gameScreen">
-  <h2>Hole <span id="currentHoleNum">1</span> / 18</h2>
-  <div id="playersInputsContainer">
-    <!-- Player input rows injected here -->
+<div id="game" style="display:none;">
+  <div>
+    <p>Hole <span id="currentHole">1</span> / 18</p>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>Player</th>
+        <th>Name</th>
+        <th>Handicap</th>
+        <th>Strokes</th>
+        <th>Bonus</th>
+        <th>Penalty</th>
+        <th>Money ($)</th>
+      </tr>
+    </thead>
+    <tbody id="playersTableBody"></tbody>
+  </table>
+
+  <div class="controls">
+    <button id="prevHoleBtn">Previous Hole</button>
+    <button id="nextHoleBtn">Next Hole</button>
   </div>
 
-  <div id="holeControls">
-    <button id="prevHoleBtn" disabled>← Previous Hole</button>
-    <button id="nextHoleBtn">Next Hole →</button>
-  </div>
-
-  <h3>Hole History</h3>
-  <div id="historyList">
-    <!-- Hole summary injected here -->
+  <div style="margin-top:1rem;">
+    <h3>Total Money:</h3>
+    <ul id="totalMoneyList"></ul>
   </div>
 </div>
 
 <script>
 (() => {
-  // Cached DOM
-  const playerSetup = document.getElementById('playerSetup');
-  const gameScreen = document.getElementById('gameScreen');
-  const playersHandicapContainer = document.getElementById('playersHandicapContainer');
-  const playersInputsContainer = document.getElementById('playersInputsContainer');
-  const currentHoleNumSpan = document.getElementById('currentHoleNum');
-  const historyList = document.getElementById('historyList');
-  const startGameBtn = document.getElementById('startGameBtn');
-  const prevHoleBtn = document.getElementById('prevHoleBtn');
-  const nextHoleBtn = document.getElementById('nextHoleBtn');
-  const numPlayersInput = document.getElementById('numPlayers');
-  const playersMinusBtn = document.getElementById('playersMinus');
-  const playersPlusBtn = document.getElementById('playersPlus');
-  const skinValueInput = document.getElementById('skinValue');
-  const skinMinusBtn = document.getElementById('skinMinus');
-  const skinPlusBtn = document.getElementById('skinPlus');
-
-  // Constants
-  const MAX_PLAYERS = 8;
-  const MIN_PLAYERS = 2;
-  const MAX_SKIN = 100;
-  const MIN_SKIN = 1;
-  const TOTAL_HOLES = 18;
-
-  // State
+  // --- State ---
   let state = {
     numPlayers: 4,
-    skinValue: 5,
-    handicaps: [],
+    skin: 5,
     currentHole: 1,
-    holes: [], // array of hole data objects
+    players: [],  // { name, handicap, strokes, bonus, penalty }
+    holeData: [], // Array of hole objects, each hole is array of player data (same shape)
   };
 
-  // Utils
-  const saveState = () => {
-    localStorage.setItem('golfBetCalculatorState', JSON.stringify(state));
-  };
+  // --- Elements ---
+  const numPlayersInput = document.getElementById('numPlayers');
+  const skinValueInput = document.getElementById('skinValue');
+  const playersMinusBtn = document.getElementById('players-minus');
+  const playersPlusBtn = document.getElementById('players-plus');
+  const skinMinusBtn = document.getElementById('skin-minus');
+  const skinPlusBtn = document.getElementById('skin-plus');
+  const startGameBtn = document.getElementById('startGameBtn');
+  const setupDiv = document.getElementById('setup');
+  const gameDiv = document.getElementById('game');
+  const currentHoleSpan = document.getElementById('currentHole');
+  const playersTableBody = document.getElementById('playersTableBody');
+  const prevHoleBtn = document.getElementById('prevHoleBtn');
+  const nextHoleBtn = document.getElementById('nextHoleBtn');
+  const totalMoneyList = document.getElementById('totalMoneyList');
 
-  const loadState = () => {
-    const saved = localStorage.getItem('golfBetCalculatorState');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (parsed.numPlayers && parsed.skinValue && parsed.handicaps && parsed.currentHole && parsed.holes) {
-          state = parsed;
-          return true;
-        }
-      } catch (e) {
-        console.warn('Failed to load saved state');
-      }
-    }
-    return false;
-  };
-
-  // Render Handicap Inputs on Setup Screen
-  function renderHandicapInputs() {
-    playersHandicapContainer.innerHTML = '';
-    for (let i = 0; i < state.numPlayers; i++) {
-      const playerNum = i + 1;
-      const handicap = state.handicaps[i] ?? 0;
-      const div = document.createElement('div');
-      div.style.marginBottom = '0.3rem';
-      div.innerHTML = `
-        <label>Player ${playerNum} Handicap:</label>
-        <button type="button" class="handicap-minus" data-index="${i}">−</button>
-        <input type="number" class="handicap-input" data-index="${i}" value="${handicap}" min="0" max="54" readonly style="width:50px; text-align:center;" />
-        <button type="button" class="handicap-plus" data-index="${i}">+</button>
-      `;
-      playersHandicapContainer.appendChild(div);
-    }
-    // Attach handicap +/- events
-    document.querySelectorAll('.handicap-minus').forEach(btn => {
-      btn.onclick = () => {
-        const i = +btn.dataset.index;
-        if(state.handicaps[i] > 0) {
-          state.handicaps[i]--;
-          saveState();
-          renderHandicapInputs();
-        }
-      };
-    });
-    document.querySelectorAll('.handicap-plus').forEach(btn => {
-      btn.onclick = () => {
-        const i = +btn.dataset.index;
-        if(state.handicaps[i] < 54) {
-          state.handicaps[i]++;
-          saveState();
-          renderHandicapInputs();
-        }
-      };
-    });
+  // --- Load/save state from localStorage ---
+  function saveState() {
+    localStorage.setItem('golfBetState', JSON.stringify(state));
   }
-
-  // Render player inputs for the current hole
-  function renderPlayerInputs() {
-    playersInputsContainer.innerHTML = '';
-    const holeData = state.holes[state.currentHole - 1] || {};
-
-    for (let i = 0; i < state.numPlayers; i++) {
-      const playerNum = i + 1;
-      // For each stat, get current value or default to 0
-      const strokes = (holeData.players && holeData.players[i]?.strokes) ?? 0;
-      const bonus = (holeData.players && holeData.players[i]?.bonus) ?? 0;
-      const penalty = (holeData.players && holeData.players[i]?.penalty) ?? 0;
-
-      const div = document.createElement('div');
-      div.className = 'player-inputs';
-
-      // Player label
-      const playerLabel = document.createElement('div');
-      playerLabel.textContent = `Player ${playerNum}`;
-      playerLabel.style.width = '80px';
-      div.appendChild(playerLabel);
-
-      // Create controls for strokes, bonus, penalty with ± buttons
-      function createCounter(name, value) {
-        const container = document.createElement('div');
-        container.innerHTML = `
-          <label>${name}</label>
-          <button type="button" class="dec" data-type="${name.toLowerCase()}" data-player="${i}">−</button>
-          <input type="number" class="${name.toLowerCase()}-input" data-player="${i}" value="${value}" min="0" style="width:50px; text-align:center;" />
-          <button type="button" class="inc" data-type="${name.toLowerCase()}" data-player="${i}">+</button>
-        `;
-        return container;
+  function loadState() {
+    const saved = localStorage.getItem('golfBetState');
+    if(saved){
+      state = JSON.parse(saved);
+      // Ensure holeData length and players length matches numPlayers
+      while(state.players.length < state.numPlayers){
+        state.players.push({name:`Player ${state.players.length+1}`, handicap:0, strokes:0, bonus:0, penalty:0});
       }
-
-      div.appendChild(createCounter('Strokes', strokes));
-      div.appendChild(createCounter('Bonus', bonus));
-      div.appendChild(createCounter('Penalty', penalty));
-
-      // Money earned/lost display
-      const moneyDiv = document.createElement('div');
-      moneyDiv.className = 'money';
-      moneyDiv.textContent = '$0';
-      moneyDiv.id = `money-player-${i}`;
-      div.appendChild(moneyDiv);
-
-      playersInputsContainer.appendChild(div);
-    }
-
-    // Attach event listeners for buttons and inputs
-    attachGameInputListeners();
-
-    // Update money display on render
-    updateMoneyDisplay();
-  }
-
-  // Attach events to + / - buttons and inputs on game screen
-  function attachGameInputListeners() {
-    document.querySelectorAll('#playersInputsContainer button.dec').forEach(btn => {
-      btn.onclick = () => {
-        const player = +btn.dataset.player;
-        const type = btn.dataset.type;
-        changePlayerStat(player, type, -1);
-      };
-    });
-    document.querySelectorAll('#playersInputsContainer button.inc').forEach(btn => {
-      btn.onclick = () => {
-        const player = +btn.dataset.player;
-        const type = btn.dataset.type;
-        changePlayerStat(player, type, +1);
-      };
-    });
-    document.querySelectorAll('#playersInputsContainer input').forEach(input => {
-      input.oninput = () => {
-        const player = +input.dataset.player;
-        const type = input.className.replace('-input', '');
-        let val = parseInt(input.value);
-        if (isNaN(val) || val < 0) val = 0;
-        updatePlayerStat(player, type, val);
-      };
-    });
-  }
-
-  // Change player stat by delta (±1)
-  function changePlayerStat(player, type, delta) {
-    if (!state.holes[state.currentHole - 1]) {
-      state.holes[state.currentHole - 1] = { players: [] };
-    }
-    if (!state.holes[state.currentHole - 1].players[player]) {
-      state.holes[state.currentHole - 1].players[player] = { strokes: 0, bonus: 0, penalty: 0 };
-    }
-    let current = state.holes[state.currentHole - 1].players[player][type] ?? 0;
-    current += delta;
-    if (current < 0) current = 0;
-    state.holes[state.currentHole - 1].players[player][type] = current;
-    saveState();
-    renderPlayerInputs();
-  }
-
-  // Update player stat from input box directly
-  function updatePlayerStat(player, type, val) {
-    if (!state.holes[state.currentHole - 1]) {
-      state.holes[state.currentHole - 1] = { players: [] };
-    }
-    if (!state.holes[state.currentHole - 1].players[player]) {
-      state.holes[state.currentHole - 1].players[player] = { strokes: 0, bonus: 0, penalty: 0 };
-    }
-    state.holes[state.currentHole - 1].players[player][type] = val;
-    saveState();
-    updateMoneyDisplay();
-  }
-
-  // Calculate money won/lost for current hole per player and update UI
-  function updateMoneyDisplay() {
-    const holeData = state.holes[state.currentHole - 1];
-    if (!holeData || !holeData.players) return;
-
-    const skin = state.skinValue;
-    const handicaps = state.handicaps;
-
-    const players = holeData.players;
-
-    // Step 1: Calculate who wins/loses each hole based on strokes
-    // Step 2: Calculate handicap compensation between players: (handicap diff)*0.7 (handicapCompensation)
-    // Step 3: Calculate money won/lost for strokes, hole wins, bonus, penalty
-
-    // Calculate handicap compensation per player pair
-    function handicapComp(p1, p2) {
-      return Math.round((handicaps[p2] - handicaps[p1]) * 0.7 * 100) / 100;
-    }
-
-    // Calculate total money per player
-    // We'll calculate a matrix of money from each player to every other player and sum up for each player
-
-    const moneyMatrix = [];
-    for (let i = 0; i < state.numPlayers; i++) {
-      moneyMatrix[i] = new Array(state.numPlayers).fill(0);
-    }
-
-    // Calculate money flows player i vs player j
-    for (let i = 0; i < state.numPlayers; i++) {
-      for (let j = 0; j < state.numPlayers; j++) {
-        if (i === j) continue;
-
-        const p_i = players[i];
-        const p_j = players[j];
-
-        if (!p_i || !p_j) continue;
-
-        // Handicap compensation from player i to j
-        const hComp = handicapComp(i, j);
-
-        // Adjust strokes by handicap compensation (player i gives handicapComp to player j)
-        // So effective strokes for i vs j comparison is:
-        const strokes_i_adj = p_i.strokes + hComp;
-        const strokes_j_adj = p_j.strokes;
-
-        // Hole win/lose/tie logic
-        // If i strokes < j strokes => i wins hole vs j => +1 skin from j
-        // If i strokes > j strokes => i loses hole vs j => -1 skin to j
-        // If tie => 0
-
-        let holeMoney = 0;
-        if (strokes_i_adj < strokes_j_adj) {
-          holeMoney = skin; // i wins this hole against j
-        } else if (strokes_i_adj > strokes_j_adj) {
-          holeMoney = -skin; // i loses hole against j
-        } else {
-          holeMoney = 0;
-        }
-
-        // Stroke difference money: (strokes_j_adj - strokes_i_adj) * skin
-        // If i has less strokes after adjustment, i gains difference*skin
-        // If more strokes, loses difference*skin
-
-        const strokeDiff = strokes_j_adj - strokes_i_adj;
-        const strokeMoney = strokeDiff * skin;
-
-        // Total from hole and stroke difference:
-        // Actually, holeMoney covers the hole win/lose (+/-1 skin)
-        // Stroke difference adds money proportional to difference in strokes
-        // But careful to not double count - the hole win already implies who wins.
-        // Let's define total money from strokes + hole:
-
-        // We'll follow this logic:
-        // - Hole win: ±1 skin value
-        // - Stroke difference: (strokeDiff)*skin (can be positive or negative)
-
-        // So total is holeMoney + strokeMoney
-        // But this could lead to double counting? 
-        // Usually the skin game pays for the hole win/loss; stroke difference is usually considered separately.
-
-        // Since you requested both, we will sum them.
-
-        const totalMoney_ij = holeMoney + strokeMoney;
-
-        // Add bonus and penalty from player i to player j
-        // Bonus and penalty apply only to player i's total money relative to all players
-        // We apply them after summing all player pairs
-
-        moneyMatrix[i][j] = totalMoney_ij;
+      while(state.players.length > state.numPlayers){
+        state.players.pop();
       }
-    }
-
-    // Sum money for each player from all other players
-    const playerMoney = new Array(state.numPlayers).fill(0);
-
-    for (let i = 0; i < state.numPlayers; i++) {
-      for (let j = 0; j < state.numPlayers; j++) {
-        if (i === j) continue;
-        playerMoney[i] += moneyMatrix[i][j];
-      }
-    }
-
-    // Apply Bonus and Penalty
-    // Each bonus is + skin * number of opponents (wins this amount from each player)
-    // Each penalty is - skin * number of opponents (loses this amount to each player)
-    for (let i = 0; i < state.numPlayers; i++) {
-      const p = players[i];
-      if (!p) continue;
-      const opponentCount = state.numPlayers - 1;
-      playerMoney[i] += (p.bonus ?? 0) * skin * opponentCount;
-      playerMoney[i] -= (p.penalty ?? 0) * skin * opponentCount;
-    }
-
-    // Round all to 2 decimals
-    for(let i=0; i<playerMoney.length; i++){
-      playerMoney[i] = Math.round(playerMoney[i]*100)/100;
-    }
-
-    // Update UI
-    for (let i = 0; i < state.numPlayers; i++) {
-      const moneyDiv = document.getElementById(`money-player-${i}`);
-      if (moneyDiv) {
-        moneyDiv.textContent = (playerMoney[i] >= 0 ? '+' : '') + '$' + playerMoney[i].toFixed(2);
-        moneyDiv.style.color = playerMoney[i] >= 0 ? 'green' : 'red';
-      }
-    }
-
-    // Update hole summary in history
-    renderHistory();
-  }
-
-  // Render history summary list
-  function renderHistory() {
-    historyList.innerHTML = '';
-    for (let h = 0; h < state.holes.length; h++) {
-      const hole = state.holes[h];
-      if (!hole) continue;
-
-      const div = document.createElement('div');
-      div.textContent = `Hole ${h+1}: `;
-
-      // Show player money for this hole
-      if (!hole.players) continue;
-
-      const moneyForHole = [];
-
-      // Calculate money per player for hole h (like updateMoneyDisplay but isolated)
-      const skin = state.skinValue;
-      const handicaps = state.handicaps;
-      const players = hole.players;
-
-      function handicapComp(p1, p2) {
-        return Math.round((handicaps[p2] - handicaps[p1]) * 0.7 * 100) / 100;
-      }
-
-      const moneyMatrix = [];
-      for (let i = 0; i < state.numPlayers; i++) {
-        moneyMatrix[i] = new Array(state.numPlayers).fill(0);
-      }
-      for (let i = 0; i < state.numPlayers; i++) {
-        for (let j = 0; j < state.numPlayers; j++) {
-          if (i === j) continue;
-
-          const p_i = players[i];
-          const p_j = players[j];
-          if (!p_i || !p_j) continue;
-
-          const hComp = handicapComp(i, j);
-          const strokes_i_adj = p_i.strokes + hComp;
-          const strokes_j_adj = p_j.strokes;
-          let holeMoney = 0;
-          if (strokes_i_adj < strokes_j_adj) holeMoney = skin;
-          else if (strokes_i_adj > strokes_j_adj) holeMoney = -skin;
-          else holeMoney = 0;
-
-          const strokeDiff = strokes_j_adj - strokes_i_adj;
-          const strokeMoney = strokeDiff * skin;
-          const totalMoney_ij = holeMoney + strokeMoney;
-
-          moneyMatrix[i][j] = totalMoney_ij;
+      if(state.holeData.length < 18) {
+        while(state.holeData.length < 18){
+          const hole = [];
+          for(let i=0;i<state.numPlayers;i++){
+            hole.push({strokes:0, bonus:0, penalty:0});
+          }
+          state.holeData.push(hole);
         }
       }
-      const playerMoney = new Array(state.numPlayers).fill(0);
-      for (let i = 0; i < state.numPlayers; i++) {
-        for (let j = 0; j < state.numPlayers; j++) {
-          if (i === j) continue;
-          playerMoney[i] += moneyMatrix[i][j];
-        }
-      }
-      for (let i = 0; i < state.numPlayers; i++) {
-        const p = players[i];
-        if (!p) continue;
-        const opponentCount = state.numPlayers - 1;
-        playerMoney[i] += (p.bonus ?? 0) * skin * opponentCount;
-        playerMoney[i] -= (p.penalty ?? 0) * skin * opponentCount;
-      }
-      for(let i=0; i<playerMoney.length; i++){
-        playerMoney[i] = Math.round(playerMoney[i]*100)/100;
-      }
-
-      const moneyStrings = playerMoney.map((m,i) => `P${i+1}: ${(m >= 0 ? '+' : '') + '$' + m.toFixed(2)}`);
-      div.textContent += moneyStrings.join(' | ');
-
-      // Click to jump to this hole to edit/view
-      div.style.cursor = 'pointer';
-      div.style.userSelect = 'none';
-      div.title = 'Click to view/edit this hole';
-      div.onclick = () => {
-        goToHole(h + 1);
-      };
-
-      historyList.appendChild(div);
     }
   }
 
-  // Navigation functions
-  function goToHole(holeNum) {
-    if (holeNum < 1 || holeNum > TOTAL_HOLES) return;
-    state.currentHole = holeNum;
-    currentHoleNumSpan.textContent = holeNum;
-    prevHoleBtn.disabled = holeNum === 1;
-    nextHoleBtn.disabled = holeNum === TOTAL_HOLES;
-    saveState();
-    renderPlayerInputs();
+  // --- Init players on start ---
+  function initPlayers(){
+    state.players = [];
+    for(let i=0; i<state.numPlayers; i++){
+      state.players.push({
+        name: `Player ${i+1}`,
+        handicap: 0,
+        strokes: 0,
+        bonus: 0,
+        penalty: 0
+      });
+    }
+    state.holeData = [];
+    for(let h=0; h<18; h++){
+      const hole = [];
+      for(let i=0; i<state.numPlayers; i++){
+        hole.push({strokes:0, bonus:0, penalty:0});
+      }
+      state.holeData.push(hole);
+    }
+    state.currentHole = 1;
   }
 
-  function nextHole() {
-    if (state.currentHole < TOTAL_HOLES) {
-      goToHole(state.currentHole + 1);
-    }
-  }
-  function prevHole() {
-    if (state.currentHole > 1) {
-      goToHole(state.currentHole - 1);
-    }
-  }
-
-  // Update numPlayers input handlers on Setup Screen
+  // --- Event handlers for + / - buttons ---
   playersMinusBtn.onclick = () => {
-    if (state.numPlayers > MIN_PLAYERS) {
+    if(state.numPlayers > 2){
       state.numPlayers--;
-      // Remove last player's handicap if needed
-      state.handicaps = state.handicaps.slice(0, state.numPlayers);
-      saveState();
       numPlayersInput.value = state.numPlayers;
-      renderHandicapInputs();
+      saveState();
     }
   };
   playersPlusBtn.onclick = () => {
-    if (state.numPlayers < MAX_PLAYERS) {
+    if(state.numPlayers < 8){
       state.numPlayers++;
-      // Add default handicap 0 for new player
-      state.handicaps.push(0);
-      saveState();
       numPlayersInput.value = state.numPlayers;
-      renderHandicapInputs();
+      saveState();
     }
   };
-
-  // Skin value plus/minus buttons
   skinMinusBtn.onclick = () => {
-    if (state.skinValue > MIN_SKIN) {
-      state.skinValue--;
-      skinValueInput.value = state.skinValue;
+    if(state.skin > 1){
+      state.skin--;
+      skinValueInput.value = state.skin;
       saveState();
-      if (gameScreen.style.display === 'block') updateMoneyDisplay();
     }
   };
   skinPlusBtn.onclick = () => {
-    if (state.skinValue < MAX_SKIN) {
-      state.skinValue++;
-      skinValueInput.value = state.skinValue;
+    if(state.skin < 100){
+      state.skin++;
+      skinValueInput.value = state.skin;
       saveState();
-      if (gameScreen.style.display === 'block') updateMoneyDisplay();
     }
   };
 
-  // Start Game button
-  startGameBtn.onclick = () => {
-    if (!state.handicaps || state.handicaps.length !== state.numPlayers) {
-      state.handicaps = new Array(state.numPlayers).fill(0);
-    }
-    // Reset holes
-    state.holes = [];
-    state.currentHole = 1;
-    saveState();
-    playerSetup.style.display = 'none';
-    gameScreen.style.display = 'block';
-    currentHoleNumSpan.textContent = '1';
-    prevHoleBtn.disabled = true;
-    nextHoleBtn.disabled = false;
-    renderPlayerInputs();
-    renderHistory();
-  };
+  // --- Render the players input table ---
+  function renderPlayersTable() {
+    playersTableBody.innerHTML = '';
+    const holeIndex = state.currentHole - 1;
+    for(let i=0; i<state.numPlayers; i++){
+      const player = state.players[i];
+      // Get hole data
+      const hole = state.holeData[holeIndex] || [];
+      const hd = hole[i] || {strokes:0, bonus:0, penalty:0};
 
-  prevHoleBtn.onclick = prevHole;
-  nextHoleBtn.onclick = nextHole;
+      const tr = document.createElement('tr');
+      // Player label
+      const playerLabelTd = document.createElement('td');
+      playerLabelTd.textContent = `Player ${i+1}`;
+      tr.appendChild(playerLabelTd);
 
-  // On load - initialize
-  function init() {
-    if (!loadState()) {
-      // fresh start
-      state.numPlayers = 4;
-      state.skinValue = 5;
-      state.handicaps = new Array(state.numPlayers).fill(0);
-      state.currentHole = 1;
-      state.holes = [];
-    }
-    numPlayersInput.value = state.numPlayers;
-    skinValueInput.value = state.skinValue;
+      // Name input
+      const nameTd = document.createElement('td');
+      const nameInput = document.createElement('input');
+      nameInput.type = 'text';
+      nameInput.value = player.name;
+      nameInput.onchange = e => {
+        state.players[i].name = e.target.value.trim() || `Player ${i+1}`;
+        saveState();
+      };
+      nameTd.appendChild(nameInput);
+      tr.appendChild(nameTd);
 
-    renderHandicapInputs();
+      // Handicap input
+      const handicapTd = document.createElement('td');
+      const handicapInput = document.createElement('input');
+      handicapInput.type = 'number';
+      handicapInput.min = 0;
+      handicapInput.max = 54;
+      handicapInput.value = player.handicap;
+      handicapInput.onchange = e => {
+        let val = parseInt(e.target.value);
+        if (isNaN(val) || val < 0) val = 0;
+        if (val > 54) val = 54;
+        state.players[i].handicap = val;
+        saveState();
+        renderPlayersTable();
+        calculateAndRenderMoney();
+      };
+      handicapTd.appendChild(handicapInput);
+      tr.appendChild(handicapTd);
 
-    if (state.holes.length > 0) {
-      playerSetup.style.display = 'none';
-      gameScreen.style.display = 'block';
-      currentHoleNumSpan.textContent = state.currentHole;
-      prevHoleBtn.disabled = state.currentHole === 1;
-      nextHoleBtn.disabled = state.currentHole === TOTAL_HOLES;
-      renderPlayerInputs();
-      renderHistory();
-    } else {
-      playerSetup.style.display = 'block';
-      gameScreen.style.display = 'none';
+      // Strokes input with +/- buttons
+      tr.appendChild(createCounterCell(i, 'strokes', hd.strokes));
+      tr.appendChild(createCounterCell(i, 'bonus', hd.bonus));
+      tr.appendChild(createCounterCell(i, 'penalty', hd.penalty));
+
+      // Money cell
+      const moneyTd = document.createElement('td');
+      moneyTd.id = `money-player-${i}`;
+      moneyTd.textContent = '$0';
+      tr.appendChild(moneyTd);
+
+      playersTableBody.appendChild(tr);
     }
   }
 
-  init();
+  function createCounterCell(playerIndex, field, value) {
+    const td = document.createElement('td');
+    td.style.whiteSpace = 'nowrap';
+    const minusBtn = document.createElement('button');
+    minusBtn.textContent = '-';
+    minusBtn.onclick = () => {
+      let holeIndex = state.currentHole - 1;
+      let val = state.holeData[holeIndex][playerIndex][field];
+      val = Math.max(0, val - 1);
+      state.holeData[holeIndex][playerIndex][field] = val;
+      saveState();
+      renderPlayersTable();
+      calculateAndRenderMoney();
+    };
+    const plusBtn = document.createElement('button');
+    plusBtn.textContent = '+';
+    plusBtn.onclick = () => {
+      let holeIndex = state.currentHole - 1;
+      let val = state.holeData[holeIndex][playerIndex][field];
+      val = val + 1;
+      state.holeData[holeIndex][playerIndex][field] = val;
+      saveState();
+      renderPlayersTable();
+      calculateAndRenderMoney();
+    };
+    const numSpan = document.createElement('input');
+    numSpan.type = 'number';
+    numSpan.min = 0;
+    numSpan.value = value;
+    numSpan.style.width = '40px';
+    numSpan.onchange = e => {
+      let val = parseInt(e.target.value);
+      if (isNaN(val) || val < 0) val = 0;
+      let holeIndex = state.currentHole - 1;
+      state.holeData[holeIndex][playerIndex][field] = val;
+      saveState();
+      renderPlayersTable();
+      calculateAndRenderMoney();
+    };
 
+    td.appendChild(minusBtn);
+    td.appendChild(numSpan);
+    td.appendChild(plusBtn);
+
+    return td;
+  }
+
+  // --- Handicap compensation formula ---
+  // compensation = (player2.handicap - player1.handicap) * 0.7
+  // player1 pays player2 if player2 handicap is higher
+  function calcHandicapCompensation(p1Index, p2Index) {
+    const h1 = state.players[p1Index].handicap;
+    const h2 = state.players[p2Index].handicap;
+    return (h2 - h1) * 0.7;
+  }
+
+  // --- Calculate money for current hole ---
+  function calculateAndRenderMoney() {
+    const holeIndex = state.currentHole - 1;
+    const hole = state.holeData[holeIndex];
+    const numPlayers = state.numPlayers;
+    const skin = state.skin;
+
+    // Initialize money array for this hole
+    let money = Array(numPlayers).fill(0);
+
+    // Get strokes for each player in this hole
+    const strokesArr = hole.map(h => h.strokes);
+
+    // Determine who won the hole: player with minimum strokes
+    const minStroke = Math.min(...strokesArr);
+
+    // For each pair of players, calculate handicap compensation and strokes difference
+    // Then calculate money won/lost based on skin value and hole win
+    for (let i = 0; i < numPlayers; i++) {
+      for (let j = 0; j < numPlayers; j++) {
+        if (i === j) continue;
+        const comp = calcHandicapCompensation(i, j);
+
+        // Adjust strokes by handicap compensation
+        const adjStrokeI = strokesArr[i] + comp;
+        const adjStrokeJ = strokesArr[j] + calcHandicapCompensation(j, i);
+
+        // Determine hole win/loss/tie between i and j
+        let holeResult = 0; // 1 if i wins, -1 if i loses, 0 tie
+
+        if (adjStrokeI < adjStrokeJ) holeResult = 1;
+        else if (adjStrokeI > adjStrokeJ) holeResult = -1;
+
+        // Skin money from hole result:
+        // Win hole = + skin
+        // Lose hole = - skin
+        // Tie = 0
+        money[i] += holeResult * skin;
+
+        // Additional money for strokes difference:
+        // (stroke difference) * skin, positive if i better than j, negative if worse
+        // Only count difference if player i actually won the hole vs j
+        if (holeResult === 1) {
+          const strokeDiff = Math.floor(adjStrokeJ - adjStrokeI);
+          if (strokeDiff > 0) {
+            money[i] += strokeDiff * skin;
+            money[j] -= strokeDiff * skin;
+          }
+        }
+      }
+    }
+
+    // Now apply Bonus and Penalty with zero sum logic:
+    // Player with n bonus gains n * skin * (numPlayers-1)
+    // Each other player loses n * skin
+    // Player with n penalty loses n * skin * (numPlayers-1)
+    // Each other player gains n * skin
+    for (let i = 0; i < numPlayers; i++) {
+      const b = hole[i].bonus || 0;
+      const p = hole[i].penalty || 0;
+      const opponentCount = numPlayers - 1;
+
+      const totalBonusMoney = b * skin * opponentCount;
+      const totalPenaltyMoney = p * skin * opponentCount;
+
+      money[i] += totalBonusMoney;
+      money[i] -= totalPenaltyMoney;
+
+      for (let j = 0; j < numPlayers; j++) {
+        if (j === i) continue;
+        money[j] -= b * skin;  // others lose bonus amount
+        money[j] += p * skin;  // others gain penalty amount
+      }
+    }
+
+    // Update money display & color
+    for(let i=0; i<numPlayers; i++){
+      const td = document.getElementById(`money-player-${i}`);
+      const val = money[i];
+      td.textContent = (val >= 0 ? '+' : '') + val.toFixed(0);
+      td.className = val > 0 ? 'money-positive' : val < 0 ? 'money-negative' : '';
+    }
+
+    // Save hole money to state for total calculation
+    state.holeData[holeIndex].money = money;
+
+    saveState();
+    renderTotalMoney();
+  }
+
+  // --- Render total money over all holes ---
+  function renderTotalMoney(){
+    const totals = Array(state.numPlayers).fill(0);
+    for(let h=0; h<state.holeData.length; h++){
+      const holeMoney = state.holeData[h].money || Array(state.numPlayers).fill(0);
+      for(let i=0; i<state.numPlayers; i++){
+        totals[i] += holeMoney[i];
+      }
+    }
+    totalMoneyList.innerHTML = '';
+    for(let i=0; i<state.numPlayers; i++){
+      const li = document.createElement('li');
+      const name = state.players[i].name;
+      const val = totals[i];
+      li.textContent = `${name}: ${val >= 0 ? '+' : ''}${val.toFixed(0)} $`;
+      li.style.color = val > 0 ? 'green' : val < 0 ? 'red' : 'black';
+      totalMoneyList.appendChild(li);
+    }
+  }
+
+  // --- Render current hole ---
+  function renderHole() {
+    currentHoleSpan.textContent = state.currentHole;
+    renderPlayersTable();
+    calculateAndRenderMoney();
+  }
+
+  // --- Handlers for hole navigation ---
+  prevHoleBtn.onclick = () => {
+    if(state.currentHole > 1){
+      state.currentHole--;
+      saveState();
+      renderHole();
+    }
+  };
+  nextHoleBtn.onclick = () => {
+    if(state.currentHole < 18){
+      state.currentHole++;
+      saveState();
+      renderHole();
+    }
+  };
+
+  // --- Start game button ---
+  startGameBtn.onclick = () => {
+    // Update state from inputs
+    state.numPlayers = parseInt(numPlayersInput.value) || 4;
+    state.skin = parseInt(skinValueInput.value) || 5;
+
+    initPlayers();
+    saveState();
+
+    setupDiv.style.display = 'none';
+    gameDiv.style.display = 'block';
+    renderHole();
+  };
+
+  // --- Init ---
+  loadState();
+
+  if(state.holeData.length > 0){
+    setupDiv.style.display = 'none';
+    gameDiv.style.display = 'block';
+    numPlayersInput.value = state.numPlayers;
+    skinValueInput.value = state.skin;
+    renderHole();
+  } else {
+    numPlayersInput.value = state.numPlayers;
+    skinValueInput.value = state.skin;
+  }
 })();
 </script>
 
