@@ -244,4 +244,68 @@
     saveState();
   }
 
-  //
+  // Initialize and bind control buttons
+  function bindControls() {
+    playersDecreaseBtn.onclick = () => {
+      if (numPlayers > 2) {
+        numPlayers--;
+        numPlayersInput.value = numPlayers;
+        resetState();
+        holeNumber = 1;
+        holeNumberSpan.textContent = holeNumber;
+        renderPlayerInputs();
+        calculateAndRenderResults();
+        saveState();
+      }
+    };
+    playersIncreaseBtn.onclick = () => {
+      if (numPlayers < maxPlayers) {
+        numPlayers++;
+        numPlayersInput.value = numPlayers;
+        resetState();
+        holeNumber = 1;
+        holeNumberSpan.textContent = holeNumber;
+        renderPlayerInputs();
+        calculateAndRenderResults();
+        saveState();
+      }
+    };
+    skinDecreaseBtn.onclick = () => {
+      if (skinValue > 1) {
+        skinValue--;
+        skinValueInput.value = skinValue;
+        calculateAndRenderResults();
+        saveState();
+      }
+    };
+    skinIncreaseBtn.onclick = () => {
+      if (skinValue < 100) {
+        skinValue++;
+        skinValueInput.value = skinValue;
+        calculateAndRenderResults();
+        saveState();
+      }
+    };
+    startGameBtn.onclick = () => {
+      nextHole();
+    };
+  }
+
+  // On load
+  function init() {
+    loadState();
+    numPlayersInput.value = numPlayers;
+    skinValueInput.value = skinValue;
+    holeNumberSpan.textContent = holeNumber;
+    bindControls();
+    renderPlayerInputs();
+    calculateAndRenderResults();
+  }
+
+  init();
+
+})();
+</script>
+
+</body>
+</html>
