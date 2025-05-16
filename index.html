@@ -169,66 +169,65 @@
     document.getElementById(`penalty-${idx}`).textContent = players[idx].penalty;
   }
 
-  // Calculate money for current hole and update total
-  function calculateAndRenderResults() {
-    resultsTbody.innerHTML = '';
-    resultsTable.style.display = 'table';
+function calculateAndRenderResults() {
+  resultsTbody.innerHTML = '';
+  resultsTable.style.display = 'table';
 
-    // Current hole money per player (reset to 0 before calc)
-    const holeMoney = Array(numPlayers).fill(0);
+  const holeMoney = Array(numPlayers).fill(0);
 
-    // 1. Pairwise stroke comparisons
-    for (let i = 0; i < numPlayers; i++) {
-      for (let j = 0; j < numPlayers; j++) {
-        if (i === j) continue;
-        const diff = players[j].strokes - players[i].strokes;
-        if (diff > 0) {
-          holeMoney[i] += diff * skinValue;
-        } else if (diff < 0) {
-          holeMoney[i] += diff * skinValue; // diff is negative, so subtract money
-        }
-        // if diff == 0, no money exchanged
+  // Pairwise stroke comparisons + hole wins
+  for (let i = 0; i < numPlayers; i++) {
+    for (let j = 0; j < numPlayers; j++) {
+      if (i === j) continue;
+
+      const diff = players[j].strokes - players[i].strokes;
+      // Money based on stroke difference
+      holeMoney[i] += diff * skinValue;
+
+      // Extra +1 skin if player i wins the hole against j (less strokes)
+      if (players[i].strokes < players[j].strokes) {
+        holeMoney[i] += skinValue;
       }
-    }
-
-    // 2. Bonus & Penalty
-    for (let i = 0; i < numPlayers; i++) {
-      const bonusGain = players[i].bonus * skinValue * (numPlayers - 1);
-      holeMoney[i] += bonusGain;
-      for (let j = 0; j < numPlayers; j++) {
-        if (j === i) continue;
-        holeMoney[j] -= players[i].bonus * skinValue;
-      }
-
-      const penaltyLoss = players[i].penalty * skinValue * (numPlayers - 1);
-      holeMoney[i] -= penaltyLoss;
-      for (let j = 0; j < numPlayers; j++) {
-        if (j === i) continue;
-        holeMoney[j] += players[i].penalty * skinValue;
-      }
-    }
-
-    // Update total money and render
-    for(let i=0; i<numPlayers; i++) {
-      totalMoney[i] += holeMoney[i];
-    }
-
-    // Render table rows
-    for(let i=0; i<numPlayers; i++) {
-      const tr = document.createElement('tr');
-      const moneyThisHole = holeMoney[i];
-      const total = totalMoney[i];
-      tr.innerHTML = `
-        <td>${players[i].name}</td>
-        <td>${players[i].strokes}</td>
-        <td>${players[i].bonus}</td>
-        <td>${players[i].penalty}</td>
-        <td class="${moneyThisHole >=0 ? 'money-positive' : 'money-negative'}">$${moneyThisHole.toFixed(2)}</td>
-        <td class="${total >=0 ? 'money-positive' : 'money-negative'}">$${total.toFixed(2)}</td>
-      `;
-      resultsTbody.appendChild(tr);
     }
   }
+
+  // Bonus & Penalty
+  for (let i = 0; i < numPlayers; i++) {
+    const bonusGain = players[i].bonus * skinValue * (numPlayers - 1);
+    holeMoney[i] += bonusGain;
+    for (let j = 0; j < numPlayers; j++) {
+      if (j === i) continue;
+      holeMoney[j] -= players[i].bonus * skinValue;
+    }
+
+    const penaltyLoss = players[i].penalty * skinValue * (numPlayers - 1);
+    holeMoney[i] -= penaltyLoss;
+    for (let j = 0; j < numPlayers; j++) {
+      if (j === i) continue;
+      holeMoney[j] += players[i].penalty * skinValue;
+    }
+  }
+
+  for (let i = 0; i < numPlayers; i++) {
+    totalMoney[i] += holeMoney[i];
+  }
+
+  // Render results table rows
+  for (let i = 0; i < numPlayers; i++) {
+    const tr = document.createElement('tr');
+    const moneyThisHole = holeMoney[i];
+    const total = totalMoney[i];
+    tr.innerHTML = `
+      <td>${players[i].name}</td>
+      <td>${players[i].strokes}</td>
+      <td>${players[i].bonus}</td>
+      <td>${players[i].penalty}</td>
+      <td class="${moneyThisHole >= 0 ? 'money-positive' : 'money-negative'}">$${moneyThisHole.toFixed(2)}</td>
+      <td class="${total >= 0 ? 'money-positive' : 'money-negative'}">$${total.toFixed(2)}</td>
+    `;
+    resultsTbody.appendChild(tr);
+  }
+}
 
   // Reset inputs for next hole, keep total money and player names
   function nextHole() {
