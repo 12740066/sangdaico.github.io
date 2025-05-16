@@ -1,30 +1,39 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Golf Bet Calculator</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="container">
+  <div id="setup">
     <h1>Golf Bet Calculator</h1>
-    <div class="setup">
-      <label>Number of Players:
-        <button onclick="changePlayerCount(-1)">−</button>
-        <span id="playerCount">2</span>
-        <button onclick="changePlayerCount(1)">+</button>
-      </label>
-      <label>Skin Value ($):
-        <button onclick="changeSkinValue(-1)">−</button>
-        <span id="skinValue">5</span>
-        <button onclick="changeSkinValue(1)">+</button>
-      </label>
-      <button onclick="startGame()">Start Game</button>
+    <div>
+      <label>Number of Players:</label>
+      <button onclick="changeValue('playerCount', -1)">−</button>
+      <span id="playerCount">2</span>
+      <button onclick="changeValue('playerCount', 1)">+</button>
     </div>
-    <div id="gameArea"></div>
+    <div>
+      <label>Skin Value ($):</label>
+      <button onclick="changeValue('skinValue', -1)">−</button>
+      <span id="skinValue">5</span>
+      <button onclick="changeValue('skinValue', 1)">+</button>
+    </div>
+    <button onclick="startGame()">Start Game</button>
   </div>
+
+  <div id="game" style="display:none;">
+    <h2>Hole <span id="holeNumber">1</span></h2>
+    <table id="playersTable"></table>
+    <div class="controls">
+      <button onclick="prevHole()">⬅ Previous Hole</button>
+      <button onclick="nextHole()">Next Hole ➡</button>
+    </div>
+    <h3>Total Winnings</h3>
+    <ul id="totalMoneyList"></ul>
+  </div>
+
   <script src="script.js"></script>
 </body>
 </html>
