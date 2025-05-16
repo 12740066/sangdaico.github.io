@@ -1,59 +1,55 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Golf Betting Calculator</title>
-<link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Golf Bet Calculator</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <h1>Golf Bet Calculator</h1>
 
-<h1>Golf Betting Calculator</h1>
+  <div id="setup">
+    <div>
+      <label>Number of Players: </label>
+      <button id="players-minus">-</button>
+      <input type="number" id="players-num" min="1" max="8" value="4" />
+      <button id="players-plus">+</button>
+    </div>
 
-<div id="setup">
-  <label>Number of Players:
-    <button id="players-minus">-</button>
-    <span id="players-count">4</span>
-    <button id="players-plus">+</button>
-  </label>
-  <br/>
-  <label>Skin Value ($):
-    <button id="skin-minus">-</button>
-    <span id="skin-value">5</span>
-    <button id="skin-plus">+</button>
-  </label>
-  <br/>
-  <button id="start-btn">Start Game</button>
-</div>
+    <div>
+      <label>Skin Value ($): </label>
+      <button id="skin-minus">-</button>
+      <input type="number" id="skin-value" min="1" value="5" />
+      <button id="skin-plus">+</button>
+    </div>
 
-<div id="players-setup" style="display:none;">
-  <h2>Player Info</h2>
-  <div id="players-list"></div>
-  <button id="begin-game-btn">Begin Game</button>
-</div>
+    <button id="start-game">Start Game</button>
+  </div>
 
-<div id="game" style="display:none;">
-  <h2>Game Play</h2>
-  <button id="prev-hole">Previous Hole</button>
-  <span id="current-hole">Hole 1</span>
-  <button id="next-hole">Next Hole</button>
-  <table id="score-table">
-    <thead>
-      <tr>
-        <th>Player</th>
-        <th>Handicap</th>
-        <th>Strokes</th>
-        <th>Bonus</th>
-        <th>Penalty</th>
-        <th>Money This Hole</th>
-        <th>Total Money</th>
-      </tr>
-    </thead>
-    <tbody id="score-body"></tbody>
-  </table>
-</div>
+  <div id="game" style="display:none;">
+    <div>
+      <button id="prev-hole">Previous Hole</button>
+      <span>Hole <span id="current-hole">1</span> / 18</span>
+      <button id="next-hole">Next Hole</button>
+    </div>
 
-<script src="script.js"></script>
+    <table>
+      <thead>
+        <tr>
+          <th>Player Name</th>
+          <th>Handicap Compensation</th>
+          <th>Strokes</th>
+          <th>Bonus</th>
+          <th>Penalty</th>
+          <th>Money This Hole</th>
+          <th>Total Money</th>
+        </tr>
+      </thead>
+      <tbody id="score-body"></tbody>
+    </table>
+  </div>
 
+  <script src="script.js"></script>
 </body>
 </html>
