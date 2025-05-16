@@ -1,44 +1,65 @@
 body {
   font-family: Arial, sans-serif;
-  margin: 20px;
-  background: #f9f9f9;
+  max-width: 900px;
+  margin: 20px auto;
+  padding: 0 10px;
 }
 
-h2, h3 {
-  color: #2c3e50;
-}
-
-label {
-  display: block;
-  margin: 10px 0;
-}
-
-input[type="number"] {
-  width: 60px;
-  margin-left: 5px;
+h1, h2 {
+  text-align: center;
 }
 
 button {
-  margin: 5px;
-  padding: 5px 10px;
-  background: #3498db;
-  color: white;
-  border: none;
-  border-radius: 5px;
+  cursor: pointer;
+  padding: 5px 8px;
+  margin: 0 3px;
 }
 
-button:hover {
-  background: #2980b9;
+label {
+  font-weight: bold;
 }
 
-.player-row {
-  margin: 10px 0;
-  padding: 10px;
-  background: #ecf0f1;
-  border-radius: 8px;
-}
-
-.player-row span {
-  display: inline-block;
+input[type="text"], input[type="number"] {
   width: 100px;
+  padding: 4px;
+  margin: 5px 10px 5px 0;
+  font-size: 1rem;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 15px;
+}
+
+th, td {
+  border: 1px solid #ccc;
+  padding: 8px;
+  text-align: center;
+}
+
+#players-list > div {
+  margin-bottom: 10px;
+}
+
+.number-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.number-control button {
+  width: 26px;
+  height: 26px;
+  font-weight: bold;
+}
+
+.money-positive {
+  color: green;
+  font-weight: bold;
+}
+
+.money-negative {
+  color: red;
+  font-weight: bold;
 }
