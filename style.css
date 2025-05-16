@@ -1,55 +1,35 @@
+
 body {
   font-family: Arial, sans-serif;
-  margin: 20px;
+  padding: 20px;
+  background: #f9f9f9;
 }
-
-h1 {
-  margin-bottom: 20px;
+.container {
+  max-width: 800px;
+  margin: auto;
 }
-
-#setup > div {
-  margin-bottom: 10px;
+label {
+  display: block;
+  margin: 10px 0;
 }
-
 button {
+  margin: 0 5px;
   padding: 5px 10px;
-  margin: 0 3px;
-  cursor: pointer;
 }
-
-input[type="number"] {
-  width: 50px;
-  text-align: center;
-  font-size: 16px;
+.player {
+  margin-bottom: 15px;
+  padding: 10px;
+  background: #fff;
+  border: 1px solid #ddd;
 }
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 20px;
-}
-
-th, td {
-  border: 1px solid #aaa;
-  padding: 8px;
+.player input {
+  width: 60px;
   text-align: center;
 }
-
-.number-control {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
+.player-name {
+  font-weight: bold;
 }
-
-.number-control button {
-  width: 30px;
-  height: 30px;
-  font-size: 18px;
-  user-select: none;
-}
-
-.number-control input {
-  width: 50px;
-  font-size: 16px;
-  text-align: center;
+.totals {
+  margin-top: 10px;
+  font-weight: bold;
 }
