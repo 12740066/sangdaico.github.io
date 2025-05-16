@@ -1,4 +1,5 @@
 let players = [];
+let handicaps = {};
 let numHoles = 18;
 let currentHole = 1;
 let scores = {};
@@ -6,8 +7,31 @@ let seoData = {};
 let birdieData = {};
 let chipInData = {};
 
+function generatePlayerInputs() {
+  const num = parseInt(document.getElementById("numPlayers").value);
+  const container = document.getElementById("playerDetails");
+  container.innerHTML = "";
+  for (let i = 1; i <= num; i++) {
+    container.innerHTML += `
+      <div>
+        <label>Player ${i} Name: <input type="text" id="player${i}Name" value="Player ${i}"/></label>
+        <label>Handicap: <input type="number" id="player${i}Handicap" value="0"/></label>
+      </div>
+    `;
+  }
+  document.getElementById("startButton").style.display = "block";
+}
+
 function startGame() {
-  players = document.getElementById('playersInput').value.split(',').map(p => p.trim());
+  const num = parseInt(document.getElementById("numPlayers").value);
+  players = [];
+  handicaps = {};
+  for (let i = 1; i <= num; i++) {
+    const name = document.getElementById(`player${i}Name`).value.trim();
+    const hc = parseInt(document.getElementById(`player${i}Handicap`).value) || 0;
+    players.push(name);
+    handicaps[name] = hc;
+  }
   for (let p of players) {
     scores[p] = Array(numHoles).fill(0);
     seoData[p] = Array(numHoles).fill(0);
@@ -26,7 +50,7 @@ function renderHole() {
   for (let p of players) {
     container.innerHTML += `
       <div class="player-score">
-        <div>${p}</div>
+        <div>${p} (HC ${handicaps[p]})</div>
         <div>
           <button onclick="changeScore('${p}', -1)">−</button>
           <span id="${p}-score">${scores[p][currentHole - 1]}</span>
@@ -104,6 +128,6 @@ function calculateTotal() {
   let resultDiv = document.getElementById('results');
   resultDiv.innerHTML = '<h2>Results</h2>';
   players.forEach(p => {
-    resultDiv.innerHTML += `<p>${p}: $${result[p]}</p>`;
+    resultDiv.innerHTML += `<p>${p} (HC ${handicaps[p]}): $${result[p]}</p>`;
   });
 }
