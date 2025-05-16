@@ -1,45 +1,38 @@
 body {
   font-family: Arial, sans-serif;
-  max-width: 900px;
-  margin: 20px auto;
-  padding: 0 10px;
+  margin: 20px;
 }
 
-h1, h2 {
-  text-align: center;
+h1 {
+  margin-bottom: 20px;
+}
+
+#setup > div {
+  margin-bottom: 10px;
 }
 
 button {
-  cursor: pointer;
-  padding: 5px 8px;
+  padding: 5px 10px;
   margin: 0 3px;
+  cursor: pointer;
 }
 
-label {
-  font-weight: bold;
-}
-
-input[type="text"], input[type="number"] {
-  width: 100px;
-  padding: 4px;
-  margin: 5px 10px 5px 0;
-  font-size: 1rem;
+input[type="number"] {
+  width: 50px;
+  text-align: center;
+  font-size: 16px;
 }
 
 table {
   width: 100%;
   border-collapse: collapse;
-  margin-top: 15px;
+  margin-top: 20px;
 }
 
 th, td {
-  border: 1px solid #ccc;
+  border: 1px solid #aaa;
   padding: 8px;
   text-align: center;
-}
-
-#players-list > div {
-  margin-bottom: 10px;
 }
 
 .number-control {
@@ -49,17 +42,14 @@ th, td {
 }
 
 .number-control button {
-  width: 26px;
-  height: 26px;
-  font-weight: bold;
+  width: 30px;
+  height: 30px;
+  font-size: 18px;
+  user-select: none;
 }
 
-.money-positive {
-  color: green;
-  font-weight: bold;
-}
-
-.money-negative {
-  color: red;
-  font-weight: bold;
+.number-control input {
+  width: 50px;
+  font-size: 16px;
+  text-align: center;
 }
