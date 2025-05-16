@@ -2,33 +2,60 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Golf Bet Calculator</title>
   <link rel="stylesheet" href="style.css" />
+  <style>
+    /* quick horizontal style for input with buttons */
+    .num-input-wrapper {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .num-input-wrapper button {
+      width: 30px;
+      height: 30px;
+      font-size: 18px;
+      line-height: 18px;
+      padding: 0;
+      user-select: none;
+      cursor: pointer;
+    }
+    .num-input-wrapper input[type=number] {
+      width: 50px;
+      text-align: center;
+      font-size: 18px;
+      padding: 5px 4px;
+    }
+  </style>
 </head>
 <body>
+
   <div class="setup">
     <h2>Golf Bet Setup</h2>
 
-    <div>
-      <label>Number of Players: 
-        <button onclick="adjustValue('playerCount', -1)">−</button>
-        <input id="playerCount" type="number" min="2" max="6" value="4" />
-        <button onclick="adjustValue('playerCount', 1)">+</button>
-      </label>
+    <div class="num-input-wrapper">
+      <button onclick="adjustValue('playerCount', -1)">−</button>
+      <input id="playerCount" type="number" min="2" max="6" value="4" />
+      <button onclick="adjustValue('playerCount', 1)">+</button>
+      <label style="margin-left:10px;">Number of Players</label>
     </div>
 
-    <div>
-      <label>Skin Value ($): 
-        <button onclick="adjustValue('skinValue', -1)">−</button>
-        <input id="skinValue" type="number" min="1" value="5" />
-        <button onclick="adjustValue('skinValue', 1)">+</button>
-      </label>
+    <div class="num-input-wrapper">
+      <button onclick="adjustValue('skinValue', -1)">−</button>
+      <input id="skinValue" type="number" min="1" value="5" />
+      <button onclick="adjustValue('skinValue', 1)">+</button>
+      <label style="margin-left:10px;">Skin Value ($)</label>
     </div>
+
+    <br/>
 
     <button id="nextBtn">Next</button>
-    <div id="playerInputs"></div>
-    <button id="startBtn" style="display:none">Start Game</button>
+
+    <div id="playerInputs" style="margin-top:20px;"></div>
+
+    <button id="startBtn" style="display:none; margin-top:10px;">Start Game</button>
   </div>
 
   <div id="game" style="display:none">
@@ -42,25 +69,31 @@
 
   <script src="script.js"></script>
   <script>
-    document.getElementById('nextBtn').addEventListener('click', () => {
-      const count = parseInt(document.getElementById('playerCount').value);
-      const container = document.getElementById('playerInputs');
-      container.innerHTML = '';
-      for (let i = 0; i < count; i++) {
-        container.innerHTML += `
-          <div>
-            <label>Player ${i+1} Name: <input id="pname${i}" /></label>
-            <label>Handicap: <input id="phcap${i}" type="number" /></label>
-          </div>
-        `;
+    // Restore saved setup inputs on load
+    window.onload = () => {
+      if(localStorage.getItem('golfSetup')){
+        const setup = JSON.parse(localStorage.getItem('golfSetup'));
+        document.getElementById('playerCount').value = setup.playerCount;
+        document.getElementById('skinValue').value = setup.skinValue;
+        if(setup.players && setup.players.length){
+          generatePlayerInputs(setup.playerCount, setup.players);
+          document.getElementById('startBtn').style.display = 'inline-block';
+        }
       }
-      document.getElementById('startBtn').style.display = 'inline-block';
+      if(localStorage.getItem('golfGame')){
+        loadGameFromStorage();
+      }
+    };
+
+    // Save setup inputs on change
+    document.getElementById('playerCount').addEventListener('input', () => {
+      saveSetupToStorage();
+    });
+    document.getElementById('skinValue').addEventListener('input', () => {
+      saveSetupToStorage();
     });
 
-    document.getElementById('startBtn').addEventListener('click', () => {
-      startGame();
-    });
-
+    // Adjust input number with buttons
     function adjustValue(id, delta) {
       const input = document.getElementById(id);
       let val = parseInt(input.value || '0');
@@ -71,7 +104,159 @@
         val = Math.max(1, val);
       }
       input.value = val;
+      saveSetupToStorage();
     }
+
+    // Generate player name/handicap inputs (optionally with existing data)
+    function generatePlayerInputs(count, existingPlayers=[]) {
+      const container = document.getElementById('playerInputs');
+      container.innerHTML = '';
+      for(let i=0; i < count; i++){
+        const name = existingPlayers[i]?.name || '';
+        const hcap = existingPlayers[i]?.handicap || '';
+        container.innerHTML += `
+          <div>
+            <label>Player ${i+1} Name: <input id="pname${i}" value="${name}" /></label>
+            <label>Handicap: <input id="phcap${i}" type="number" value="${hcap}" /></label>
+          </div>
+        `;
+      }
+    }
+
+    document.getElementById('nextBtn').addEventListener('click', () => {
+      const count = parseInt(document.getElementById('playerCount').value);
+      generatePlayerInputs(count);
+      document.getElementById('startBtn').style.display = 'inline-block';
+      saveSetupToStorage();
+    });
+
+    // Save setup info into localStorage
+    function saveSetupToStorage(){
+      const count = parseInt(document.getElementById('playerCount').value);
+      const skin = parseInt(document.getElementById('skinValue').value);
+      // save players only if inputs exist
+      const players = [];
+      for(let i=0; i < count; i++){
+        const nameInput = document.getElementById(`pname${i}`);
+        const hcapInput = document.getElementById(`phcap${i}`);
+        players.push({
+          name: nameInput ? nameInput.value : '',
+          handicap: hcapInput ? parseInt(hcapInput.value || '0') : 0
+        });
+      }
+      const setup = {playerCount: count, skinValue: skin, players};
+      localStorage.setItem('golfSetup', JSON.stringify(setup));
+    }
+
+    // Load setup and game from localStorage if exists
+    function loadGameFromStorage(){
+      const game = JSON.parse(localStorage.getItem('golfGame'));
+      if(!game) return;
+      players = game.players || [];
+      scores = game.scores || {};
+      bonusData = game.bonusData || {};
+      penaltyData = game.penaltyData || {};
+      handicaps = game.handicaps || {};
+      handicapAdjustments = game.handicapAdjustments || {};
+      currentHole = game.currentHole || 1;
+      skinValue = game.skinValue || 5;
+
+      // Show/hide views
+      document.querySelector('.setup').style.display = 'none';
+      document.getElementById('game').style.display = 'block';
+
+      renderHole();
+    }
+
+    // Save game data to localStorage after every change
+    function saveGameToStorage(){
+      const gameData = {
+        players,
+        scores,
+        bonusData,
+        penaltyData,
+        handicaps,
+        handicapAdjustments,
+        currentHole,
+        skinValue
+      };
+      localStorage.setItem('golfGame', JSON.stringify(gameData));
+    }
+
+    // Override the existing startGame function to save and setup game state
+    function startGame(){
+      skinValue = parseFloat(document.getElementById('skinValue').value || '5');
+      const count = parseInt(document.getElementById('playerCount').value);
+      players = [];
+      scores = {};
+      bonusData = {};
+      penaltyData = {};
+      handicaps = {};
+
+      for(let i=0; i < count; i++){
+        const name = document.getElementById(`pname${i}`).value || `Player ${i+1}`;
+        const hcap = parseInt(document.getElementById(`phcap${i}`).value) || 0;
+        players.push(name);
+        handicaps[name] = hcap;
+        scores[name] = Array(18).fill(0);
+        bonusData[name] = Array(18).fill(0);
+        penaltyData[name] = Array(18).fill(0);
+      }
+
+      calculateHandicapCompensation();
+
+      document.querySelector('.setup').style.display = 'none';
+      document.getElementById('game').style.display = 'block';
+
+      currentHole = 1;
+      renderHole();
+      saveGameToStorage();
+    }
+
+    // Extend the existing change handlers to save game after change
+    function changeScore(player, delta){
+      let val = scores[player][currentHole - 1];
+      val += delta;
+      if(val < 0) val = 0;
+      scores[player][currentHole - 1] = val;
+      renderHole();
+      saveGameToStorage();
+    }
+
+    function changeBonus(player, delta){
+      let val = bonusData[player][currentHole - 1] || 0;
+      val += delta;
+      if(val < 0) val = 0;
+      bonusData[player][currentHole - 1] = val;
+      renderHole();
+      saveGameToStorage();
+    }
+
+    function changePenalty(player, delta){
+      let val = penaltyData[player][currentHole - 1] || 0;
+      val += delta;
+      if(val < 0) val = 0;
+      penaltyData[player][currentHole - 1] = val;
+      renderHole();
+      saveGameToStorage();
+    }
+
+    function prevHole(){
+      if(currentHole > 1){
+        currentHole--;
+        renderHole();
+        saveGameToStorage();
+      }
+    }
+
+    function nextHole(){
+      if(currentHole < 18){
+        currentHole++;
+        renderHole();
+        saveGameToStorage();
+      }
+    }
+
   </script>
 </body>
 </html>
