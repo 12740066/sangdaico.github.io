@@ -1,133 +1,112 @@
-let players = [];
-let handicaps = {};
-let numHoles = 18;
-let currentHole = 1;
-let scores = {};
-let seoData = {};
-let birdieData = {};
-let chipInData = {};
+/* style.css */
 
-function generatePlayerInputs() {
-  const num = parseInt(document.getElementById("numPlayers").value);
-  const container = document.getElementById("playerDetails");
-  container.innerHTML = "";
-  for (let i = 1; i <= num; i++) {
-    container.innerHTML += `
-      <div>
-        <label>Player ${i} Name: <input type="text" id="player${i}Name" value="Player ${i}"/></label>
-        <label>Handicap: <input type="number" id="player${i}Handicap" value="0"/></label>
-      </div>
-    `;
-  }
-  document.getElementById("startButton").style.display = "block";
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+    Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+  background-color: #f9f9f9;
+  margin: 20px;
+  color: #333;
 }
 
-function startGame() {
-  const num = parseInt(document.getElementById("numPlayers").value);
-  players = [];
-  handicaps = {};
-  for (let i = 1; i <= num; i++) {
-    const name = document.getElementById(`player${i}Name`).value.trim();
-    const hc = parseInt(document.getElementById(`player${i}Handicap`).value) || 0;
-    players.push(name);
-    handicaps[name] = hc;
-  }
-  for (let p of players) {
-    scores[p] = Array(numHoles).fill(0);
-    seoData[p] = Array(numHoles).fill(0);
-    birdieData[p] = Array(numHoles).fill(false);
-    chipInData[p] = Array(numHoles).fill(false);
-  }
-  document.getElementById('setup').style.display = 'none';
-  document.getElementById('scorecard').style.display = 'block';
-  renderHole();
+h1, h2 {
+  text-align: center;
+  color: #2a7a2a;
 }
 
-function renderHole() {
-  document.getElementById('holeTitle').innerText = `Hole ${currentHole}`;
-  const container = document.getElementById('holeControls');
-  container.innerHTML = '';
-  for (let p of players) {
-    container.innerHTML += `
-      <div class="player-score">
-        <div>${p} (HC ${handicaps[p]})</div>
-        <div>
-          <button onclick="changeScore('${p}', -1)">−</button>
-          <span id="${p}-score">${scores[p][currentHole - 1]}</span>
-          <button onclick="changeScore('${p}', 1)">+</button>
-        </div>
-        <div>
-          <label>Seo: <input type="number" id="${p}-seo" value="${seoData[p][currentHole - 1]}" /></label>
-          <label><input type="checkbox" id="${p}-birdie" ${birdieData[p][currentHole - 1] ? 'checked' : ''}/> Birdie</label>
-          <label><input type="checkbox" id="${p}-chipin" ${chipInData[p][currentHole - 1] ? 'checked' : ''}/> Chip-in</label>
-        </div>
-      </div>
-    `;
-  }
+#setup, #scorecard, #results {
+  max-width: 600px;
+  margin: 20px auto;
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.1);
 }
 
-function changeScore(player, delta) {
-  scores[player][currentHole - 1] += delta;
-  if (scores[player][currentHole - 1] < 0) scores[player][currentHole - 1] = 0;
-  document.getElementById(`${player}-score`).innerText = scores[player][currentHole - 1];
+label {
+  display: block;
+  margin: 10px 0 5px;
+  font-weight: 600;
 }
 
-function saveCurrentHole() {
-  for (let p of players) {
-    seoData[p][currentHole - 1] = parseInt(document.getElementById(`${p}-seo`).value) || 0;
-    birdieData[p][currentHole - 1] = document.getElementById(`${p}-birdie`).checked;
-    chipInData[p][currentHole - 1] = document.getElementById(`${p}-chipin`).checked;
-  }
+input[type="text"],
+input[type="number"] {
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 16px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  box-sizing: border-box;
 }
 
-function nextHole() {
-  saveCurrentHole();
-  if (currentHole < numHoles) {
-    currentHole++;
-    renderHole();
-  }
+button {
+  background-color: #2a7a2a;
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 5px;
+  font-size: 16px;
+  cursor: pointer;
+  margin-top: 10px;
+  transition: background-color 0.3s ease;
 }
 
-function prevHole() {
-  saveCurrentHole();
-  if (currentHole > 1) {
-    currentHole--;
-    renderHole();
-  }
+button:hover {
+  background-color: #1f541f;
 }
 
-function calculateTotal() {
-  saveCurrentHole();
-  let result = {};
-  let skinAmount = 5, seoPenalty = 1, birdieReward = 2, chipInReward = 3;
+.player-score {
+  margin-bottom: 20px;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 15px;
+}
 
-  players.forEach(p => result[p] = 0);
+.player-score div:first-child {
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: #2a7a2a;
+}
 
-  for (let h = 0; h < numHoles; h++) {
-    let strokes = {};
-    players.forEach(p => strokes[p] = scores[p][h]);
-    let minStrokes = Math.min(...Object.values(strokes));
-    let skinWinners = players.filter(p => strokes[p] === minStrokes);
+.player-score button {
+  width: 30px;
+  height: 30px;
+  font-weight: bold;
+  margin: 0 5px;
+  padding: 0;
+  line-height: 30px;
+  text-align: center;
+}
 
-    players.forEach(p => {
-      let total = 0;
-      total -= seoData[p][h] * seoPenalty;
-      if (birdieData[p][h]) total += birdieReward;
-      if (chipInData[p][h]) total += chipInReward;
+.player-score span {
+  font-size: 18px;
+  min-width: 25px;
+  display: inline-block;
+  text-align: center;
+}
 
-      if (skinWinners.length === 1 && skinWinners[0] === p) {
-        total += (players.length - 1) * skinAmount;
-      } else if (!skinWinners.includes(p)) {
-        total -= skinAmount;
-      }
+.nav-buttons {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 15px;
+}
 
-      result[p] += total;
-    });
+input[type="checkbox"] {
+  margin-left: 10px;
+  transform: scale(1.2);
+  vertical-align: middle;
+}
+
+@media (max-width: 480px) {
+  body {
+    margin: 10px;
   }
 
-  let resultDiv = document.getElementById('results');
-  resultDiv.innerHTML = '<h2>Results</h2>';
-  players.forEach(p => {
-    resultDiv.innerHTML += `<p>${p} (HC ${handicaps[p]}): $${result[p]}</p>`;
-  });
+  button {
+    font-size: 14px;
+    padding: 8px 12px;
+  }
+
+  input[type="text"], input[type="number"] {
+    font-size: 14px;
+    padding: 6px 8px;
+  }
 }
