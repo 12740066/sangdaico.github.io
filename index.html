@@ -1,35 +1,91 @@
-<!-- index.html -->
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Golf Bet Calculator</title>
-  <link rel="stylesheet" href="style.css" />
-</head>
-<body>
-  <h1>Golf Bet Calculator</h1>
-  <div id="setup">
-    <label>Number of Players:</label>
-    <input type="number" id="numPlayers" min="1" max="8" value="4"/>
-    <button onclick="generatePlayerInputs()">Next</button>
-    <div id="playerDetails"></div>
-    <div id="startButton" style="display:none;">
-      <button onclick="startGame()">Start Game</button>
-    </div>
-  </div>
+function calculateHoleEarnings(holeIndex) {
+  const skinAmount = 5, seoPenalty = 1, birdieReward = 2, chipInReward = 3;
+  let earnings = {};
+  players.forEach(p => earnings[p] = 0);
 
-  <div id="scorecard" style="display:none;">
-    <h2 id="holeTitle">Hole 1</h2>
-    <div id="holeControls"></div>
-    <div class="nav-buttons">
-      <button onclick="prevHole()">⟵ Previous</button>
-      <button onclick="nextHole()">Next ⟶</button>
-    </div>
-    <button onclick="calculateTotal()">Finish Round</button>
-  </div>
+  // Get scores for this hole
+  let strokes = {};
+  players.forEach(p => strokes[p] = scores[p][holeIndex]);
 
-  <div id="results"></div>
-  <script src="script.js"></script>
-</body>
-</html>
+  let minStrokes = Math.min(...Object.values(strokes));
+  let skinWinners = players.filter(p => strokes[p] === minStrokes);
+
+  players.forEach(p => {
+    let total = 0;
+    total -= (seoData[p][holeIndex] || 0) * seoPenalty;
+    if (birdieData[p][holeIndex]) total += birdieReward;
+    if (chipInData[p][holeIndex]) total += chipInReward;
+
+    if (skinWinners.length === 1 && skinWinners[0] === p) {
+      total += (players.length - 1) * skinAmount;
+    } else if (!skinWinners.includes(p)) {
+      total -= skinAmount;
+    }
+
+    earnings[p] = total;
+  });
+
+  return earnings;
+}
+
+function calculateTotalEarnings() {
+  let totals = {};
+  players.forEach(p => totals[p] = 0);
+  for (let h = 0; h < currentHole; h++) {
+    let holeEarnings = calculateHoleEarnings(h);
+    players.forEach(p => totals[p] += holeEarnings[p]);
+  }
+  return totals;
+}
+
+function renderEarnings() {
+  // Calculate and render earnings for current hole and totals
+  let holeEarnings = calculateHoleEarnings(currentHole - 1);
+  let totalEarnings = calculateTotalEarnings();
+
+  let holeDiv = document.getElementById("holeEarnings");
+  let totalDiv = document.getElementById("totalEarnings");
+
+  holeDiv.innerHTML = "";
+  totalDiv.innerHTML = "";
+
+  players.forEach(p => {
+    holeDiv.innerHTML += `<p>${p}: $${holeEarnings[p]}</p>`;
+    totalDiv.innerHTML += `<p>${p}: $${totalEarnings[p]}</p>`;
+  });
+}
+
+// Update renderHole() to call renderEarnings() after drawing controls
+function renderHole() {
+  document.getElementById('holeTitle').innerText = `Hole ${currentHole}`;
+  const container = document.getElementById('holeControls');
+  container.innerHTML = '';
+  for (let p of players) {
+    container.innerHTML += `
+      <div class="player-score">
+        <div>${p} (HC ${handicaps[p]})</div>
+        <div>
+          <button onclick="changeScore('${p}', -1)">−</button>
+          <span id="${p}-score">${scores[p][currentHole - 1]}</span>
+          <button onclick="changeScore('${p}', 1)">+</button>
+        </div>
+        <div>
+          <label>Seo: <input type="number" id="${p}-seo" value="${seoData[p][currentHole - 1]}" /></label>
+          <label><input type="checkbox" id="${p}-birdie" ${birdieData[p][currentHole - 1] ? 'checked' : ''}/> Birdie</label>
+          <label><input type="checkbox" id="${p}-chipin" ${chipInData[p][currentHole - 1] ? 'checked' : ''}/> Chip-in</label>
+        </div>
+      </div>
+    `;
+  }
+  renderEarnings();
+}
+
+// Update saveCurrentHole() to also update earnings display dynamically
+function saveCurrentHole() {
+  for (let p of players) {
+    seoData[p][currentHole - 1] = parseInt(document.getElementById(`${p}-seo`).value) || 0;
+    birdieData[p][currentHole - 1] = document.getElementById(`${p}-birdie`).checked;
+    chipInData[p][currentHole - 1] = document.getElementById(`${p}-chipin`).checked;
+  }
+  renderEarnings();
+}
