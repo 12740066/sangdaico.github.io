@@ -1,84 +1,109 @@
 let players = [];
 let numHoles = 18;
-let bettingRules = {
-  seoPenalty: 1,
-  birdieReward: 2,
-  chipInReward: 3,
-  skinAmount: 5
-};
+let currentHole = 1;
+let scores = {};
+let seoData = {};
+let birdieData = {};
+let chipInData = {};
 
 function startGame() {
-  const input = document.getElementById('playersInput').value;
-  players = input.split(',').map(p => p.trim()).filter(p => p);
-  renderForm();
+  players = document.getElementById('playersInput').value.split(',').map(p => p.trim());
+  for (let p of players) {
+    scores[p] = Array(numHoles).fill(0);
+    seoData[p] = Array(numHoles).fill(0);
+    birdieData[p] = Array(numHoles).fill(false);
+    chipInData[p] = Array(numHoles).fill(false);
+  }
+  document.getElementById('setup').style.display = 'none';
+  document.getElementById('scorecard').style.display = 'block';
+  renderHole();
 }
 
-function renderForm() {
-  const container = document.getElementById('gameContainer');
+function renderHole() {
+  document.getElementById('holeTitle').innerText = `Hole ${currentHole}`;
+  const container = document.getElementById('holeControls');
   container.innerHTML = '';
-
-  players.forEach(player => {
-    const section = document.createElement('div');
-    section.className = 'player-section';
-    section.innerHTML = `<h2>${player}</h2>`;
-
-    for (let i = 1; i <= numHoles; i++) {
-      section.innerHTML += `
+  for (let p of players) {
+    container.innerHTML += `
+      <div class="player-score">
+        <div>${p}</div>
         <div>
-          <span class="hole-label">Hole ${i}:</span>
-          Strokes <input type="number" id="${player}-strokes-${i}" />
-          Seo <input type="number" id="${player}-seo-${i}" />
-          Birdie <input type="checkbox" id="${player}-birdie-${i}" />
-          Chip-in <input type="checkbox" id="${player}-chipin-${i}" />
-        </div>`;
-    }
+          <button onclick="changeScore('${p}', -1)">−</button>
+          <span id="${p}-score">${scores[p][currentHole - 1]}</span>
+          <button onclick="changeScore('${p}', 1)">+</button>
+        </div>
+        <div>
+          <label>Seo: <input type="number" id="${p}-seo" value="${seoData[p][currentHole - 1]}" /></label>
+          <label><input type="checkbox" id="${p}-birdie" ${birdieData[p][currentHole - 1] ? 'checked' : ''}/> Birdie</label>
+          <label><input type="checkbox" id="${p}-chipin" ${chipInData[p][currentHole - 1] ? 'checked' : ''}/> Chip-in</label>
+        </div>
+      </div>
+    `;
+  }
+}
 
-    container.appendChild(section);
-  });
+function changeScore(player, delta) {
+  scores[player][currentHole - 1] += delta;
+  if (scores[player][currentHole - 1] < 0) scores[player][currentHole - 1] = 0;
+  document.getElementById(`${player}-score`).innerText = scores[player][currentHole - 1];
+}
+
+function saveCurrentHole() {
+  for (let p of players) {
+    seoData[p][currentHole - 1] = parseInt(document.getElementById(`${p}-seo`).value) || 0;
+    birdieData[p][currentHole - 1] = document.getElementById(`${p}-birdie`).checked;
+    chipInData[p][currentHole - 1] = document.getElementById(`${p}-chipin`).checked;
+  }
+}
+
+function nextHole() {
+  saveCurrentHole();
+  if (currentHole < numHoles) {
+    currentHole++;
+    renderHole();
+  }
+}
+
+function prevHole() {
+  saveCurrentHole();
+  if (currentHole > 1) {
+    currentHole--;
+    renderHole();
+  }
 }
 
 function calculateTotal() {
-  const results = {};
-  players.forEach(p => results[p] = 0);
+  saveCurrentHole();
+  let result = {};
+  let skinAmount = 5, seoPenalty = 1, birdieReward = 2, chipInReward = 3;
 
-  for (let hole = 1; hole <= numHoles; hole++) {
+  players.forEach(p => result[p] = 0);
+
+  for (let h = 0; h < numHoles; h++) {
     let strokes = {};
-    players.forEach(player => {
-      const s = parseInt(document.getElementById(`${player}-strokes-${hole}`).value) || 0;
-      strokes[player] = s;
-    });
+    players.forEach(p => strokes[p] = scores[p][h]);
+    let minStrokes = Math.min(...Object.values(strokes));
+    let skinWinners = players.filter(p => strokes[p] === minStrokes);
 
-    const minStrokes = Math.min(...Object.values(strokes));
-    const skinWinners = players.filter(p => strokes[p] === minStrokes);
-
-    players.forEach(player => {
+    players.forEach(p => {
       let total = 0;
-      const seo = parseInt(document.getElementById(`${player}-seo-${hole}`).value) || 0;
-      const birdie = document.getElementById(`${player}-birdie-${hole}`).checked;
-      const chipin = document.getElementById(`${player}-chipin-${hole}`).checked;
+      total -= seoData[p][h] * seoPenalty;
+      if (birdieData[p][h]) total += birdieReward;
+      if (chipInData[p][h]) total += chipInReward;
 
-      total -= seo * bettingRules.seoPenalty;
-      if (birdie) total += bettingRules.birdieReward;
-      if (chipin) total += bettingRules.chipInReward;
-
-      if (skinWinners.length === 1) {
-        const winner = skinWinners[0];
-        if (player === winner) {
-          total += (players.length - 1) * bettingRules.skinAmount;
-        } else {
-          total -= bettingRules.skinAmount;
-        }
+      if (skinWinners.length === 1 && skinWinners[0] === p) {
+        total += (players.length - 1) * skinAmount;
+      } else if (!skinWinners.includes(p)) {
+        total -= skinAmount;
       }
 
-      results[player] += total;
+      result[p] += total;
     });
   }
 
-  const resultsDiv = document.getElementById('results');
-  resultsDiv.innerHTML = '<h2>Results</h2>';
-  players.forEach(player => {
-    resultsDiv.innerHTML += `<p>${player}: $${results[player]}</p>`;
+  let resultDiv = document.getElementById('results');
+  resultDiv.innerHTML = '<h2>Results</h2>';
+  players.forEach(p => {
+    resultDiv.innerHTML += `<p>${p}: $${result[p]}</p>`;
   });
-
-  localStorage.setItem('golfResults', JSON.stringify(results));
 }

@@ -1,18 +1,32 @@
 body {
   font-family: Arial, sans-serif;
   margin: 20px;
-  max-width: 1000px;
 }
-input[type="number"] {
-  width: 60px;
+h1, h2 {
+  text-align: center;
 }
-.player-section {
-  margin-top: 20px;
+input[type="number"], button {
+  font-size: 18px;
 }
-.hole-label {
-  font-weight: bold;
+.player-score {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 10px 0;
 }
-.total-row {
-  font-weight: bold;
-  margin-top: 10px;
+.player-score button {
+  padding: 5px 10px;
+  margin: 0 5px;
+}
+.controls {
+  text-align: center;
+}
+.nav-buttons {
+  display: flex;
+  justify-content: center;
+  margin: 20px 0;
+}
+button {
+  padding: 10px 15px;
+  margin: 5px;
 }

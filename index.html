@@ -2,23 +2,29 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Golf Bet Calculator</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <h1>Golf Bet Calculator</h1>
-  <div>
+  <div id="setup">
     <label>Players (comma separated):</label>
-    <input type="text" id="playersInput" value="Alice,Bob,Charlie" />
+    <input type="text" id="playersInput" value="Alice,Bob,Charlie"/>
     <button onclick="startGame()">Start Game</button>
   </div>
 
-  <div id="gameContainer"></div>
+  <div id="scorecard" style="display:none;">
+    <h2 id="holeTitle">Hole 1</h2>
+    <div id="holeControls"></div>
+    <div class="nav-buttons">
+      <button onclick="prevHole()">⟵ Previous</button>
+      <button onclick="nextHole()">Next ⟶</button>
+    </div>
+    <button onclick="calculateTotal()">Finish Round</button>
+  </div>
 
-  <button onclick="calculateTotal()">Calculate Total</button>
   <div id="results"></div>
-
   <script src="script.js"></script>
 </body>
 </html>
