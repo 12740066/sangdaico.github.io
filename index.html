@@ -1,456 +1,268 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Golf Betting Calculator</title>
-<style>
-  body {
-    font-family: Arial, sans-serif;
-    max-width: 900px;
-    margin: 20px auto;
-    padding: 0 15px;
-  }
-  h1 {
-    text-align: center;
-  }
-  label {
-    margin-right: 10px;
-  }
-  input[type="text"] {
-    width: 120px;
-    padding: 5px;
-    margin-right: 20px;
-  }
-  button {
-    padding: 5px 10px;
-    margin: 0 5px 10px 0;
-    cursor: pointer;
-  }
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 20px;
-  }
-  table, th, td {
-    border: 1px solid #999;
-  }
-  th, td {
-    padding: 8px;
-    text-align: center;
-  }
-  .money-positive {
-    color: green;
-    font-weight: bold;
-  }
-  .money-negative {
-    color: red;
-    font-weight: bold;
-  }
-  .controls {
-    margin-bottom: 20px;
-  }
-  .input-group {
-    margin-bottom: 10px;
-  }
-  .number-control {
-    display: inline-flex;
-    align-items: center;
-  }
-  .number-control button {
-    width: 30px;
-    height: 30px;
-    font-weight: bold;
-  }
-  .number-control input {
-    width: 40px;
-    text-align: center;
-    margin: 0 5px;
-    font-size: 16px;
-  }
-  .player-row {
-    display: flex;
-    align-items: center;
-    margin-bottom: 8px;
-  }
-  .player-row > div {
-    margin-right: 10px;
-  }
-  .player-name {
-    width: 110px;
-  }
-  .num-control {
-    display: inline-flex;
-    align-items: center;
-  }
-  .num-control button {
-    width: 24px;
-    height: 24px;
-    font-weight: bold;
-  }
-  .num-control span {
-    width: 30px;
-    text-align: center;
-    display: inline-block;
-  }
-</style>
+  <meta charset="UTF-8">
+  <title>Golf Bet Calculator</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    h2 {
+      margin-top: 30px;
+    }
+    .controls, .player-inputs, .results {
+      margin-bottom: 20px;
+    }
+    input[type="number"] {
+      width: 60px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 6px;
+      text-align: center;
+    }
+    .button-group button {
+      margin: 0 5px;
+    }
+    .player-card {
+      margin-bottom: 10px;
+    }
+  </style>
 </head>
 <body>
-<h1>Golf Betting Calculator</h1>
+
+<h1>Golf Bet Calculator</h1>
 
 <div class="controls">
-  <div class="input-group">
-    <label>Number of Players:</label>
-    <div class="number-control">
-      <button id="players-decrease">-</button>
-      <input type="text" id="numPlayers" readonly />
-      <button id="players-increase">+</button>
-    </div>
-  </div>
-  <div class="input-group">
-    <label>Skin Value ($):</label>
-    <div class="number-control">
-      <button id="skin-decrease">-</button>
-      <input type="text" id="skinValue" readonly />
-      <button id="skin-increase">+</button>
-    </div>
-  </div>
-  <button id="startGameBtn">Start / Next Hole</button>
-  <span style="margin-left: 20px;">Hole: <span id="holeNumber">1</span></span>
+  <label>Number of Players:
+    <button id="numPlayersDecrease">-</button>
+    <span id="numPlayersDisplay">4</span>
+    <button id="numPlayersIncrease">+</button>
+  </label>
+  <br><br>
+  <label>Skin Value:
+    <button id="skinValueDecrease">-</button>
+    <span id="skinValueDisplay">5</span>
+    <button id="skinValueIncrease">+</button>
+  </label>
+  <br><br>
+  <button id="startGameBtn">Start Game</button>
 </div>
 
-<div id="playersInputs"></div>
+<div class="player-inputs" id="playerInputs"></div>
 
-<table id="resultsTable" style="display:none;">
-  <thead>
-    <tr>
-      <th>Player</th>
-      <th>Strokes</th>
-      <th>Bonus</th>
-      <th>Penalty</th>
-      <th>Money This Hole</th>
-      <th>Total Money</th>
-    </tr>
-  </thead>
-  <tbody id="resultsTbody"></tbody>
-</table>
+<h2>Hole <span id="holeNumber">1</span></h2>
+<div class="results">
+  <table id="resultsTable">
+    <thead>
+      <tr>
+        <th>Player</th>
+        <th>Handicap</th>
+        <th>Strokes</th>
+        <th>Bonus</th>
+        <th>Penalty</th>
+        <th>Money (This Hole)</th>
+        <th>Total Money</th>
+      </tr>
+    </thead>
+    <tbody id="resultsBody">
+    </tbody>
+  </table>
+</div>
 
 <script>
-(() => {
-  // State variables
+(function () {
   let numPlayers = 4;
   let skinValue = 5;
   let holeNumber = 1;
+  let players = [];
+  let gameStarted = false;
+
   const maxPlayers = 10;
   const minPlayers = 2;
   const minSkin = 1;
   const maxSkin = 100;
 
-  let players = [];
-  let totalMoney = [];
+  const playerInputsDiv = document.getElementById("playerInputs");
+  const resultsBody = document.getElementById("resultsBody");
+  const holeNumberSpan = document.getElementById("holeNumber");
 
-  // Elements
-  const playersInputsDiv = document.getElementById('playersInputs');
-  const resultsTable = document.getElementById('resultsTable');
-  const resultsTbody = document.getElementById('resultsTbody');
-  const holeNumberSpan = document.getElementById('holeNumber');
-  const numPlayersInput = document.getElementById('numPlayers');
-  const skinValueInput = document.getElementById('skinValue');
-  const playersDecreaseBtn = document.getElementById('players-decrease');
-  const playersIncreaseBtn = document.getElementById('players-increase');
-  const skinDecreaseBtn = document.getElementById('skin-decrease');
-  const skinIncreaseBtn = document.getElementById('skin-increase');
-  const startGameBtn = document.getElementById('startGameBtn');
+  const numPlayersDisplay = document.getElementById("numPlayersDisplay");
+  const skinValueDisplay = document.getElementById("skinValueDisplay");
 
-  // Initialize player data with defaults
-  function initPlayers() {
-    players = [];
-    totalMoney = [];
-    for (let i = 0; i < numPlayers; i++) {
-      players.push({
-        name: 'Player ' + (i + 1),
-        strokes: 0,
-        bonus: 0,
-        penalty: 0,
-      });
-      totalMoney.push(0);
-    }
-  }
-
-  // Save state to localStorage
-  function saveState() {
-    const data = {
-      numPlayers,
-      skinValue,
-      holeNumber,
-      players,
-      totalMoney,
+  function createPlayer(index) {
+    return {
+      name: "Player " + (index + 1),
+      strokes: 0,
+      bonus: 0,
+      penalty: 0,
+      handicap: 0,
+      money: 0,
     };
-    localStorage.setItem('golfBettingData', JSON.stringify(data));
   }
 
-  // Load state from localStorage or init new
-  function loadState() {
-    const data = localStorage.getItem('golfBettingData');
-    if (data) {
-      try {
-        const obj = JSON.parse(data);
-        numPlayers = obj.numPlayers || 4;
-        skinValue = obj.skinValue || 5;
-        holeNumber = obj.holeNumber || 1;
-        players = obj.players || [];
-        totalMoney = obj.totalMoney || [];
-        // If loaded data is invalid for current numPlayers, reset
-        if (players.length !== numPlayers || totalMoney.length !== numPlayers) {
-          initPlayers();
-        }
-      } catch {
-        initPlayers();
-      }
-    } else {
-      initPlayers();
+  function renderPlayerInputs() {
+    playerInputsDiv.innerHTML = "";
+    players = [];
+    for (let i = 0; i < numPlayers; i++) {
+      const player = createPlayer(i);
+      players.push(player);
+
+      const div = document.createElement("div");
+      div.className = "player-card";
+      div.innerHTML = `
+        <strong>Name:</strong> <input type="text" value="${player.name}" onchange="this.player.name = this.value"><br>
+        <strong>Handicap:</strong> <input type="number" value="${player.handicap}" onchange="this.player.handicap = parseInt(this.value) || 0">
+      `;
+      div.querySelectorAll("input").forEach(input => input.player = player);
+      playerInputsDiv.appendChild(div);
     }
   }
 
-  // Render player input rows
-  function renderPlayerInputs() {
-    playersInputsDiv.innerHTML = '';
+  function calculateHandicapCompensation() {
+    for (let i = 0; i < players.length; i++) {
+      for (let j = 0; j < players.length; j++) {
+        if (i === j) continue;
+        const diff = players[j].handicap - players[i].handicap;
+        if (diff > 0) {
+          const compensation = Math.round(diff * 0.7);
+          players[i].money -= compensation * skinValue;
+          players[j].money += compensation * skinValue;
+        }
+      }
+    }
+  }
+
+  function calculateHoleResults() {
+    const holeMoney = new Array(players.length).fill(0);
+
+    for (let i = 0; i < players.length; i++) {
+      const p1 = players[i];
+      for (let j = 0; j < players.length; j++) {
+        if (i === j) continue;
+        const p2 = players[j];
+        const diff = p1.strokes - p2.strokes;
+
+        if (diff < 0) {
+          // p1 wins
+          holeMoney[i] += skinValue * (1 + Math.abs(diff));
+          holeMoney[j] -= skinValue * (1 + Math.abs(diff));
+        }
+      }
+    }
+
+    // Apply bonus and penalties
+    for (let i = 0; i < players.length; i++) {
+      const p = players[i];
+      const others = players.length - 1;
+      const bonus = p.bonus * skinValue * others;
+      const penalty = p.penalty * skinValue * others;
+
+      holeMoney[i] += bonus - penalty;
+
+      for (let j = 0; j < players.length; j++) {
+        if (i === j) continue;
+        holeMoney[j] -= bonus / others;
+        holeMoney[j] += penalty / others;
+      }
+    }
+
+    for (let i = 0; i < players.length; i++) {
+      players[i].money += holeMoney[i];
+    }
+
+    return holeMoney;
+  }
+
+  function renderResults(holeMoney = []) {
+    resultsBody.innerHTML = "";
     players.forEach((player, i) => {
-      const div = document.createElement('div');
-      div.className = 'player-row';
-
-      // Player name input
-      const nameDiv = document.createElement('div');
-      nameDiv.className = 'player-name';
-      const nameInput = document.createElement('input');
-      nameInput.type = 'text';
-      nameInput.value = player.name;
-      nameInput.oninput = e => {
-        players[i].name = e.target.value;
-        saveState();
-        calculateAndRenderResults();
-      };
-      nameDiv.appendChild(nameInput);
-      div.appendChild(nameDiv);
-
-      // Strokes control
-      const strokesDiv = document.createElement('div');
-      strokesDiv.className = 'num-control';
-      strokesDiv.innerHTML = `
-        <button>-</button><span>${player.strokes}</span><button>+</button>
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td>${player.name}</td>
+        <td>${player.handicap}</td>
+        <td>
+          <button onclick="players[${i}].strokes--;update()">-</button>
+          ${player.strokes}
+          <button onclick="players[${i}].strokes++;update()">+</button>
+        </td>
+        <td>
+          <button onclick="players[${i}].bonus--;update()">-</button>
+          ${player.bonus}
+          <button onclick="players[${i}].bonus++;update()">+</button>
+        </td>
+        <td>
+          <button onclick="players[${i}].penalty--;update()">-</button>
+          ${player.penalty}
+          <button onclick="players[${i}].penalty++;update()">+</button>
+        </td>
+        <td>$${holeMoney[i]?.toFixed(2) || "0.00"}</td>
+        <td>$${player.money.toFixed(2)}</td>
       `;
-      const [strokeDecBtn, strokeValSpan, strokeIncBtn] = strokesDiv.children;
-      strokeDecBtn.onclick = () => {
-        if (players[i].strokes > 0) {
-          players[i].strokes--;
-          strokeValSpan.textContent = players[i].strokes;
-          saveState();
-          calculateAndRenderResults();
-        }
-      };
-      strokeIncBtn.onclick = () => {
-        players[i].strokes++;
-        strokeValSpan.textContent = players[i].strokes;
-        saveState();
-        calculateAndRenderResults();
-      };
-      div.appendChild(strokesDiv);
-
-      // Bonus control
-      const bonusDiv = document.createElement('div');
-      bonusDiv.className = 'num-control';
-      bonusDiv.innerHTML = `
-        <button>-</button><span>${player.bonus}</span><button>+</button>
-      `;
-      const [bonusDecBtn, bonusValSpan, bonusIncBtn] = bonusDiv.children;
-      bonusDecBtn.onclick = () => {
-        if (players[i].bonus > 0) {
-          players[i].bonus--;
-          bonusValSpan.textContent = players[i].bonus;
-          saveState();
-          calculateAndRenderResults();
-        }
-      };
-      bonusIncBtn.onclick = () => {
-        players[i].bonus++;
-        bonusValSpan.textContent = players[i].bonus;
-        saveState();
-        calculateAndRenderResults();
-      };
-      div.appendChild(bonusDiv);
-
-      // Penalty control
-      const penaltyDiv = document.createElement('div');
-      penaltyDiv.className = 'num-control';
-      penaltyDiv.innerHTML = `
-        <button>-</button><span>${player.penalty}</span><button>+</button>
-      `;
-      const [penDecBtn, penValSpan, penIncBtn] = penaltyDiv.children;
-      penDecBtn.onclick = () => {
-        if (players[i].penalty > 0) {
-          players[i].penalty--;
-          penValSpan.textContent = players[i].penalty;
-          saveState();
-          calculateAndRenderResults();
-        }
-      };
-      penIncBtn.onclick = () => {
-        players[i].penalty++;
-        penValSpan.textContent = players[i].penalty;
-        saveState();
-        calculateAndRenderResults();
-      };
-      div.appendChild(penaltyDiv);
-
-      playersInputsDiv.appendChild(div);
+      resultsBody.appendChild(row);
     });
   }
 
-  // Calculate money for the current hole and update total money
-  function calculateAndRenderResults() {
-    resultsTbody.innerHTML = '';
-    resultsTable.style.display = 'table';
+  window.update = function () {
+    const holeMoney = calculateHoleResults();
+    renderResults(holeMoney);
+  };
 
-    const holeMoney = Array(numPlayers).fill(0);
-
-    // Calculate money from strokes and hole wins
-    for (let i = 0; i < numPlayers; i++) {
-      for (let j = 0; j < numPlayers; j++) {
-        if (i === j) continue;
-
-        const diff = players[j].strokes - players[i].strokes;
-        // Money from stroke difference (can be positive or negative)
-        holeMoney[i] += diff * skinValue;
-
-        // Extra +1 skin (skinValue) if player i wins hole vs j (less strokes)
-        if (players[i].strokes < players[j].strokes) {
-          holeMoney[i] += skinValue;
-        }
-      }
+  document.getElementById("numPlayersDecrease").onclick = () => {
+    if (numPlayers > minPlayers) {
+      numPlayers--;
+      numPlayersDisplay.textContent = numPlayers;
+      renderPlayerInputs();
     }
+  };
 
-    // Bonus and penalty money adjustments
-    for (let i = 0; i < numPlayers; i++) {
-      // Bonus: player gets (bonus * skin * (others)) added, others lose that amount
-      const bonusGain = players[i].bonus * skinValue * (numPlayers - 1);
-      holeMoney[i] += bonusGain;
-      for (let j = 0; j < numPlayers; j++) {
-        if (j !== i) {
-          holeMoney[j] -= players[i].bonus * skinValue;
-        }
-      }
-
-      // Penalty: player loses (penalty * skin * (others)), others gain that amount
-      const penaltyLoss = players[i].penalty * skinValue * (numPlayers - 1);
-      holeMoney[i] -= penaltyLoss;
-      for (let j = 0; j < numPlayers; j++) {
-        if (j !== i) {
-          holeMoney[j] += players[i].penalty * skinValue;
-        }
-      }
+  document.getElementById("numPlayersIncrease").onclick = () => {
+    if (numPlayers < maxPlayers) {
+      numPlayers++;
+      numPlayersDisplay.textContent = numPlayers;
+      renderPlayerInputs();
     }
+  };
 
-    // Update total money
-    for (let i = 0; i < numPlayers; i++) {
-      totalMoney[i] += holeMoney[i];
+  document.getElementById("skinValueDecrease").onclick = () => {
+    if (skinValue > minSkin) {
+      skinValue--;
+      skinValueDisplay.textContent = skinValue;
     }
+  };
 
-    // Render results rows
-    for (let i = 0; i < numPlayers; i++) {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${players[i].name}</td>
-        <td>${players[i].strokes}</td>
-        <td>${players[i].bonus}</td>
-        <td>${players[i].penalty}</td>
-        <td class="${holeMoney[i] >= 0 ? 'money-positive' : 'money-negative'}">$${holeMoney[i].toFixed(2)}</td>
-        <td class="${totalMoney[i] >= 0 ? 'money-positive' : 'money-negative'}">$${totalMoney[i].toFixed(2)}</td>
-      `;
-      resultsTbody.appendChild(tr);
+  document.getElementById("skinValueIncrease").onclick = () => {
+    if (skinValue < maxSkin) {
+      skinValue++;
+      skinValueDisplay.textContent = skinValue;
     }
-  }
+  };
 
-  // Reset strokes, bonus, penalty for next hole
-  function resetForNextHole() {
-    for (let i = 0; i < numPlayers; i++) {
-      players[i].strokes = 0;
-      players[i].bonus = 0;
-      players[i].penalty = 0;
+  document.getElementById("startGameBtn").onclick = () => {
+    if (!gameStarted) {
+      gameStarted = true;
+      calculateHandicapCompensation();
+      update();
+    } else {
+      holeNumber++;
+      holeNumberSpan.textContent = holeNumber;
+      players.forEach(p => {
+        p.strokes = 0;
+        p.bonus = 0;
+        p.penalty = 0;
+      });
+      update();
     }
-  }
+  };
 
-  // Next hole handler
-  function nextHole() {
-    holeNumber++;
-    holeNumberSpan.textContent = holeNumber;
-    resetForNextHole();
-    renderPlayerInputs();
-    calculateAndRenderResults();
-    saveState();
-  }
-
-  // Bind buttons
-  function bindControls() {
-    playersDecreaseBtn.onclick = () => {
-      if (numPlayers > minPlayers) {
-        numPlayers--;
-        numPlayersInput.value = numPlayers;
-        initPlayers();
-        holeNumber = 1;
-        holeNumberSpan.textContent = holeNumber;
-        renderPlayerInputs();
-        calculateAndRenderResults();
-        saveState();
-      }
-    };
-    playersIncreaseBtn.onclick = () => {
-      if (numPlayers < maxPlayers) {
-        numPlayers++;
-        numPlayersInput.value = numPlayers;
-        initPlayers();
-        holeNumber = 1;
-        holeNumberSpan.textContent = holeNumber;
-        renderPlayerInputs();
-        calculateAndRenderResults();
-        saveState();
-      }
-    };
-    skinDecreaseBtn.onclick = () => {
-      if (skinValue > minSkin) {
-        skinValue--;
-        skinValueInput.value = skinValue;
-        calculateAndRenderResults();
-        saveState();
-      }
-    };
-    skinIncreaseBtn.onclick = () => {
-      if (skinValue < maxSkin) {
-        skinValue++;
-        skinValueInput.value = skinValue;
-        calculateAndRenderResults();
-        saveState();
-      }
-    };
-
-    startGameBtn.onclick = () => {
-      nextHole();
-    };
-  }
-
-  // Initialize inputs UI & variables
-  function init() {
-    numPlayersInput.value = numPlayers;
-    skinValueInput.value = skinValue;
-    holeNumberSpan.textContent = holeNumber;
-    loadState();
-    renderPlayerInputs();
-    calculateAndRenderResults();
-    bindControls();
-  }
-
-  // Run init
-  init();
-
+  renderPlayerInputs();
 })();
 </script>
 
