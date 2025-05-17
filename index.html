@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Golf Bet Calculator</title>
   <style>
     body {
@@ -33,18 +33,13 @@
       border: 1px solid #ccc;
     }
     input[type="number"], input[type="text"] {
-      width: 100%;
-      padding: 6px;
-      box-sizing: border-box;
+      width: 60px;
+      padding: 4px;
+      text-align: center;
     }
     .center {
       text-align: center;
       margin-top: 1rem;
-      display: flex;
-      justify-content: space-between;
-      max-width: 300px;
-      margin-left: auto;
-      margin-right: auto;
     }
     .btn {
       padding: 10px 20px;
@@ -54,24 +49,28 @@
       color: white;
       border: none;
       border-radius: 5px;
-      user-select:none;
     }
     .btn:hover {
       background: #218838;
     }
-    .responsive-table {
-      overflow-x: auto;
+    .hole-nav {
+      display: flex;
+      justify-content: space-between;
+      margin: 1rem 0;
     }
-    @media (max-width: 600px) {
-      th, td {
-        font-size: 14px;
-      }
-      .center {
-        max-width: 100%;
-      }
+    .hole-nav button {
+      width: 150px;
     }
-    label {
-      margin: 0 0.5rem 0 0;
+    .hole-meta {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin-bottom: 1rem;
+    }
+    .hole-meta label {
+      display: flex;
+      align-items: center;
+      gap: 5px;
     }
   </style>
 </head>
@@ -79,7 +78,7 @@
   <div class="container">
     <h1>Golf Bet Calculator</h1>
 
-    <div class="center" style="margin-bottom:1rem;">
+    <div class="center">
       <label for="numPlayers">Number of Players:</label>
       <input type="number" id="numPlayers" min="2" max="6" value="4" />
 
@@ -94,264 +93,203 @@
     <div id="earnings"></div>
   </div>
 
-<script>
-  let players = [];
-  let history = [];
-  let currentHole = 1;
-  let skinValue = 1;
+  <script>
+    let players = [];
+    let history = [];
+    let currentHole = 0;
+    let holeData = [];
 
-  function startGame() {
-    const numPlayers = parseInt(document.getElementById('numPlayers').value);
-    skinValue = parseFloat(document.getElementById('skinValue').value);
-
-    let html = '<h2>Enter Player Names and Handicaps</h2><table><tr><th>Name</th><th>Handicap</th></tr>';
-    for (let i = 0; i < numPlayers; i++) {
-      html += `<tr><td><input type="text" id="name${i}" value="Player ${i + 1}" oninput="updatePlayerName(${i})"/></td><td><input type="number" id="hcp${i}" value="0" oninput="updatePlayerHcp(${i})"/></td></tr>`;
+    function saveGameState() {
+      localStorage.setItem('golfGameState', JSON.stringify({ players, history, currentHole, holeData }));
     }
-    html += '</table><div class="center"><button class="btn" onclick="confirmPlayers()">Confirm Players</button></div>';
-    document.getElementById('setup').innerHTML = html;
-    players = [];
-    history = [];
-    currentHole = 1;
-    document.getElementById('holeTracker').innerHTML = '';
-    document.getElementById('earnings').innerHTML = '';
-  }
 
-  function updatePlayerName(i) {
-    if (players[i]) {
-      const newName = document.getElementById(`name${i}`).value;
-      players[i].name = newName;
-      renderEarningsTable();
+    function loadGameState() {
+      const data = JSON.parse(localStorage.getItem('golfGameState'));
+      if (data) {
+        players = data.players;
+        history = data.history;
+        currentHole = data.currentHole;
+        holeData = data.holeData || [];
+        showHoleInputs();
+        renderEarningsTable();
+      }
     }
-  }
 
-  function updatePlayerHcp(i) {
-    if (players[i]) {
-      players[i].hcp = parseFloat(document.getElementById(`hcp${i}`).value) || 0;
+    function startGame() {
+      const numPlayers = parseInt(document.getElementById('numPlayers').value);
+      const skinValue = parseFloat(document.getElementById('skinValue').value);
+      let html = '<h2>Enter Player Names and Handicaps</h2><table><tr><th>Name</th><th>Handicap</th></tr>';
+      for (let i = 0; i < numPlayers; i++) {
+        html += `<tr><td><input type="text" id="name${i}" value="Player ${i+1}" /></td><td><input type="number" id="hcp${i}" value="0" /></td></tr>`;
+      }
+      html += '</table><div class="center"><button class="btn" onclick="confirmPlayers()">Confirm Players</button></div>';
+      document.getElementById('setup').innerHTML = html;
+      players = [];
+      history = [];
+      currentHole = 0;
+      holeData = [];
+    }
+
+    function confirmPlayers() {
+      const numPlayers = parseInt(document.getElementById('numPlayers').value);
+      players = [];
+      for (let i = 0; i < numPlayers; i++) {
+        const name = document.getElementById(`name${i}`).value;
+        const hcp = parseFloat(document.getElementById(`hcp${i}`).value);
+        players.push({ name, hcp, total: 0 });
+      }
       applyHandicapCompensation();
-      recalcAllEarnings();
+      showHoleInputs();
       renderEarningsTable();
-    }
-  }
-
-  function confirmPlayers() {
-    const numPlayers = parseInt(document.getElementById('numPlayers').value);
-    players = [];
-    for (let i = 0; i < numPlayers; i++) {
-      const name = document.getElementById(`name${i}`).value || `Player ${i + 1}`;
-      const hcp = parseFloat(document.getElementById(`hcp${i}`).value) || 0;
-      players.push({ name, hcp, total: 0 });
+      saveGameState();
     }
 
-    // Reset history and current hole
-    history = [];
-    currentHole = 1;
-
-    // Prepare empty history holes (start with hole 1)
-    history.push(createEmptyHoleEntry());
-
-    applyHandicapCompensation();
-    renderHoleInputs();
-    renderEarningsTable();
-  }
-
-  function createEmptyHoleEntry() {
-    return {
-      strokes: Array(players.length).fill(0),
-      bonus: Array(players.length).fill(0),
-      penalty: Array(players.length).fill(0),
-      earnings: Array(players.length).fill(0)
-    };
-  }
-
-  function applyHandicapCompensation() {
-    // Reset all totals first, then add handicap compensation
-    players.forEach(p => p.total = 0);
-
-    // Handicap compensation: low hcp pays high hcp (one-time, sum of differences * 0.7 * skinValue)
-    for (let i = 0; i < players.length; i++) {
-      for (let j = 0; j < players.length; j++) {
-        if (i !== j) {
-          const diff = players[i].hcp - players[j].hcp;
-          if (diff > 0) {
-            // player i pays player j
-            const comp = Math.floor(diff * 0.7 * skinValue);
-            players[i].total -= comp;
-            players[j].total += comp;
+    function applyHandicapCompensation() {
+      const skinValue = parseFloat(document.getElementById('skinValue').value);
+      for (let i = 0; i < players.length; i++) {
+        for (let j = 0; j < players.length; j++) {
+          if (i !== j) {
+            let diff = players[i].hcp - players[j].hcp;
+            if (diff > 0) {
+              const comp = Math.floor(diff * 0.7 * skinValue);
+              players[i].total += comp;
+              players[j].total -= comp;
+            }
           }
         }
       }
     }
-  }
 
-  function renderHoleInputs() {
-    let html = `<h2>Hole ${currentHole}</h2><table><thead><tr><th>Player</th><th>Stroke</th><th>Bonus</th><th>Penalty</th></tr></thead><tbody>`;
-    players.forEach((p, i) => {
-      html += `<tr>
-        <td>${p.name}</td>
-        <td><input type="number" min="0" id="stroke${i}" value="${history[currentHole - 1]?.strokes[i] ?? 0}" oninput="onHoleDataChange(${i}, 'stroke', this.value)"></td>
-        <td><input type="number" min="0" id="bonus${i}" value="${history[currentHole - 1]?.bonus[i] ?? 0}" oninput="onHoleDataChange(${i}, 'bonus', this.value)"></td>
-        <td><input type="number" min="0" id="penalty${i}" value="${history[currentHole - 1]?.penalty[i] ?? 0}" oninput="onHoleDataChange(${i}, 'penalty', this.value)"></td>
-      </tr>`;
-    });
-    html += '</tbody></table>';
-
-    html += `<div class="center" style="max-width:300px;margin-top:1rem;">
-      <button class="btn" onclick="prevHole()" ${currentHole === 1 ? 'disabled' : ''}>&larr; Previous Hole</button>
-      <button class="btn" onclick="nextHole()">${currentHole === history.length ? 'Next Hole +' : 'Next Hole'}</button>
-    </div>`;
-
-    document.getElementById('holeTracker').innerHTML = html;
-  }
-
-  function onHoleDataChange(playerIdx, field, value) {
-    const num = parseInt(value);
-    if (isNaN(num) || num < 0) return;
-
-    if (!history[currentHole - 1]) return;
-
-    if (field === 'stroke') history[currentHole - 1].strokes[playerIdx] = num;
-    else if (field === 'bonus') history[currentHole - 1].bonus[playerIdx] = num;
-    else if (field === 'penalty') history[currentHole - 1].penalty[playerIdx] = num;
-
-    recalcAllEarnings();
-    renderEarningsTable();
-    saveGame();
-  }
-
-  function recalcAllEarnings() {
-    // Reset totals (will include handicap comp)
-    applyHandicapCompensation();
-
-    for (let h = 0; h < history.length; h++) {
-      const hole = history[h];
-      hole.earnings = Array(players.length).fill(0);
-
-      // 0. Hole Win Earning: lowest stroke players win 1 skin from each player with higher strokes
-      const strokes = hole.strokes;
-      const earnings = hole.earnings;
-      const strokesMin = Math.min(...strokes);
-      const winners = [];
-      const losers = [];
-      for (let i = 0; i < players.length; i++) {
-        if (strokes[i] === strokesMin) winners.push(i);
-        else losers.push(i);
-      }
-      if (winners.length > 0 && losers.length > 0) {
-        const skinPerWinnerFromEachLoser = 1;
-        losers.forEach(loserIdx => {
-          winners.forEach(winnerIdx => {
-            earnings[winnerIdx] += skinPerWinnerFromEachLoser * skinValue;
-            earnings[loserIdx] -= skinPerWinnerFromEachLoser * skinValue;
-          });
-        });
+    function showHoleInputs() {
+      if (!holeData[currentHole]) {
+        holeData[currentHole] = {
+          strokes: Array(players.length).fill(0),
+          bonuses: Array(players.length).fill(0),
+          penalties: Array(players.length).fill(0),
+          par: 4,
+          index: currentHole + 1
+        };
       }
 
-      // 1. Stroke count earnings: player with fewer strokes wins skins from higher stroke players
+      let html = `<h2>Hole #${currentHole + 1}</h2>`;
+      html += `<div class="hole-meta">
+        <label>Par: <input type="number" id="parInput" value="${holeData[currentHole].par}" onchange="updatePar()"></label>
+        <label>Index: <input type="number" id="indexInput" value="${holeData[currentHole].index}" onchange="updateIndex()"></label>
+      </div>`;
+
+      html += '<table><tr><th>Player</th><th>Stroke</th><th>Bonus</th><th>Penalty</th></tr>';
+      players.forEach((p, i) => {
+        html += `<tr><td>${p.name}</td>
+          <td><input type="number" value="${holeData[currentHole].strokes[i]}" onchange="updateValue(${i}, 'strokes', this.value)"></td>
+          <td><input type="number" value="${holeData[currentHole].bonuses[i]}" onchange="updateValue(${i}, 'bonuses', this.value)"></td>
+          <td><input type="number" value="${holeData[currentHole].penalties[i]}" onchange="updateValue(${i}, 'penalties', this.value)"></td>
+        </tr>`;
+      });
+      html += '</table>';
+
+      html += `<div class="hole-nav">
+        <button class="btn" onclick="prevHole()">Previous Hole</button>
+        <button class="btn" onclick="nextHole()">Next Hole</button>
+      </div>`;
+
+      document.getElementById('holeTracker').innerHTML = html;
+    }
+
+    function updatePar() {
+      holeData[currentHole].par = parseInt(document.getElementById('parInput').value);
+      saveGameState();
+    }
+
+    function updateIndex() {
+      holeData[currentHole].index = parseInt(document.getElementById('indexInput').value);
+      saveGameState();
+    }
+
+    function updateValue(playerIdx, key, value) {
+      holeData[currentHole][key][playerIdx] = parseInt(value);
+      calculateHole();
+      renderEarningsTable();
+      saveGameState();
+    }
+
+    function nextHole() {
+      currentHole++;
+      showHoleInputs();
+      renderEarningsTable();
+      saveGameState();
+    }
+
+    function prevHole() {
+      if (currentHole > 0) currentHole--;
+      showHoleInputs();
+      renderEarningsTable();
+      saveGameState();
+    }
+
+    function calculateHole() {
+      const skinValue = parseFloat(document.getElementById('skinValue').value);
+      let strokes = holeData[currentHole].strokes;
+      let bonuses = holeData[currentHole].bonuses;
+      let penalties = holeData[currentHole].penalties;
+      let earnings = Array(players.length).fill(0);
+
       for (let i = 0; i < players.length; i++) {
         for (let j = 0; j < players.length; j++) {
           if (i !== j) {
-            if (strokes[j] > strokes[i]) {
+            // Hole win (1 skin)
+            if (strokes[i] < strokes[j]) {
+              earnings[i] += skinValue;
+              earnings[j] -= skinValue;
+            }
+            // Stroke diff
+            if (strokes[i] < strokes[j]) {
               const diff = strokes[j] - strokes[i];
               earnings[i] += diff * skinValue;
               earnings[j] -= diff * skinValue;
             }
+            // Bonus
+            earnings[i] += bonuses[i] * skinValue;
+            earnings[j] -= bonuses[i] * skinValue;
+            // Penalty
+            earnings[i] -= penalties[i] * skinValue;
+            earnings[j] += penalties[i] * skinValue;
           }
         }
       }
 
-      // 2. Bonus: each bonus skin means player wins 1 skin from every other player per bonus point
-      for (let i = 0; i < players.length; i++) {
-        const b = hole.bonus[i];
-        if (b > 0) {
-          earnings[i] += b * skinValue * (players.length - 1);
-          for (let j = 0; j < players.length; j++) {
-            if (j !== i) {
-              earnings[j] -= b * skinValue;
-            }
-          }
+      if (!history[currentHole]) history[currentHole] = { earnings: [] };
+      history[currentHole].earnings = earnings;
+
+      // Reset total
+      players.forEach((p, i) => p.total = 0);
+      for (let h = 0; h < history.length; h++) {
+        history[h].earnings.forEach((e, i) => {
+          players[i].total += e;
+        });
+      }
+    }
+
+    function renderEarningsTable() {
+      calculateHole();
+      let html = '<h2>Total Earnings</h2><table><tr><th>Player</th>';
+      for (let h = 0; h < history.length; h++) {
+        html += `<th>H${h + 1}</th>`;
+      }
+      html += '<th>Total</th></tr>';
+
+      players.forEach((p, i) => {
+        html += `<tr><td>${p.name}</td>`;
+        for (let h = 0; h < history.length; h++) {
+          html += `<td>${(history[h]?.earnings[i] || 0).toFixed(2)}</td>`;
         }
-      }
+        html += `<td>${p.total.toFixed(2)}</td></tr>`;
+      });
 
-      // 3. Penalty: each penalty skin means player loses 1 skin to every other player per penalty point
-      for (let i = 0; i < players.length; i++) {
-        const p = hole.penalty[i];
-        if (p > 0) {
-          earnings[i] -= p * skinValue * (players.length - 1);
-          for (let j = 0; j < players.length; j++) {
-            if (j !== i) {
-              earnings[j] += p * skinValue;
-            }
-          }
-        }
-      }
-
-      // Add hole earnings to player totals
-      for (let i = 0; i < players.length; i++) {
-        players[i].total += earnings[i];
-      }
+      html += '</table>';
+      document.getElementById('earnings').innerHTML = html;
     }
-  }
 
-  function renderEarningsTable() {
-    let html = `<h2>Earnings</h2><table><thead><tr><th>Player</th><th>Current Hole Earnings ($)</th><th>Total Earnings ($)</th></tr></thead><tbody>`;
-
-    players.forEach((p, i) => {
-      const currHoleEarn = history[currentHole - 1]?.earnings[i] ?? 0;
-      html += `<tr><td>${p.name}</td><td>${currHoleEarn.toFixed(2)}</td><td>${p.total.toFixed(2)}</td></tr>`;
-    });
-
-    html += '</tbody></table>';
-    document.getElementById('earnings').innerHTML = html;
-  }
-
-  function prevHole() {
-    if (currentHole > 1) {
-      currentHole--;
-      renderHoleInputs();
-      renderEarningsTable();
-    }
-  }
-
-  function nextHole() {
-    if (currentHole === history.length) {
-      // Add new hole entry
-      history.push(createEmptyHoleEntry());
-    }
-    currentHole++;
-    renderHoleInputs();
-    renderEarningsTable();
-  }
-
-  function saveGame() {
-    const data = {
-      players,
-      history,
-      currentHole,
-      skinValue,
-    };
-    localStorage.setItem('golfBetCalculator', JSON.stringify(data));
-  }
-
-  function loadGame() {
-    const data = localStorage.getItem('golfBetCalculator');
-    if (data) {
-      const obj = JSON.parse(data);
-      players = obj.players || [];
-      history = obj.history || [];
-      currentHole = obj.currentHole || 1;
-      skinValue = obj.skinValue || 1;
-
-      renderHoleInputs();
-      recalcAllEarnings();
-      renderEarningsTable();
-    }
-  }
-
-  // Load saved game if any on page load
-  window.onload = () => {
-    loadGame();
-  };
-</script>
+    window.onload = loadGameState;
+  </script>
 </body>
 </html>
